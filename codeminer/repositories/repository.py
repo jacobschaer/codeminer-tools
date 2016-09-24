@@ -1,8 +1,14 @@
-class RepositoryObject:
-    def __init__(self, path, revision, repository):
-        self.path = path
-        self.revision = revision
-        self.repository
+import os
+
+def change_dir(function):
+    def wrap_inner(*args, **kwargs):
+        self = args[0]
+        old_path = os.getcwd()
+        os.chdir(self.path)
+        result = function(*args, **kwargs)
+        os.chdir(old_path)
+        return result
+    return wrap_inner
 
 class Repository:
     pass

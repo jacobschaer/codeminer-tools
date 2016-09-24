@@ -33,7 +33,10 @@ class TestHgReads(unittest.TestCase):
             'hg rename a.txt c.txt',
             'hg commit -m "Commit 4"' + hg_config,
             'hg remove c.txt',
-            'hg commit -m "Commit 5"' + hg_config
+            'hg commit -m "Commit 5"' + hg_config,
+            'hg copy b.txt d.txt',
+            'cp a.txt.orig d.txt',
+            'hg commit -m "Commit 6"' + hg_config
         ]
 
         for command in commands:
@@ -98,9 +101,15 @@ class TestHgReads(unittest.TestCase):
         changeset = sut.get_changes('4')
         self.assertEqual(changeset[0].action, change.ChangeType.remove)
 
+    def test_get_derived_change(self):
+        sut = hg.open_repository(self.repository_path)
+        changeset = sut.get_changes('5')
+        self.assertEqual(changeset[0].action, change.ChangeType.derived)
+
+
     def test_walk_history(self):
         sut = hg.open_repository(self.repository_path)
-        self.assertEqual(len([x for x in sut.walk_history()]), 5)
+        self.assertEqual(len([x for x in sut.walk_history()]), 6)
 
 if __name__ == '__main__':
     unittest.main()

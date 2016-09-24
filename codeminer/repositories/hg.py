@@ -20,7 +20,7 @@ def change_dir(function):
 def create_repository(path=None, **kwargs):
     return HgRepository(hglib.init(dest=path, **kwargs), cleanup=False)
 
-def open_repository(path=None, workspace=None, **kwargs):
+def open_repository(path, workspace=None, **kwargs):
     checkout_path = tempfile.mkdtemp(dir=workspace)
     client = hglib.clone(source=path, dest=checkout_path, **kwargs)
     client.open()

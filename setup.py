@@ -3,7 +3,8 @@ from setuptools import setup
 requires = [
     'pyramid',
     'python-hglib',
-    'gitpython'
+    'gitpython',
+    'xmltodict'
 ]
 
 setup(name='codeminer',

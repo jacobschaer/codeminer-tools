@@ -6,8 +6,7 @@ import subprocess
 import tempfile
 import unittest
 
-import codeminer.repositories.hg as hg
-import codeminer.repositories.change as change
+from codeminer.repositories import hg, change
 
 class TestHgReads(unittest.TestCase):
     @classmethod

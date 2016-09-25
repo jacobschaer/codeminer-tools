@@ -111,6 +111,7 @@ class HgRepository(Repository):
                 changes.append(change)
 
         # Go through and find 'Moves' which are copies + removes
+        # TODO: Consider case where multiple copies one source
         removes = list()
         for copy in copies:
             for change in changes:
@@ -134,6 +135,9 @@ class HgRepository(Repository):
 
     @change_dir
     def get_object(self, path, rev=None):
+        # Note: Should ideally use the librarie's "cat" function, but it
+        # has a bug in that it doesn't provide a "cwd" argument. This implementation
+        # is based on the libarie's with the fix implemented.
         from hglib.util import b, cmdbuilder
         if path is not None:
             path = b(str(path))

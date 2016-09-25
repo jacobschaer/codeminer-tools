@@ -6,13 +6,13 @@ import git
 from codeminer.repositories.repository import change_dir, Repository
 from codeminer.repositories.change import ChangeType, Change, ChangeSet
 
-def create_repository(path=None, **kwargs):
-    pass
-
 def open_repository(path, workspace=None, **kwargs):
     from os.path import join
     checkout_path = tempfile.mkdtemp(dir=workspace)
     if os.path.exists(path):
+        # Remove the checkout path so we can use copytree() which
+        # requires the path must not exist. We're only using mkdtemp()
+        # to ensure the file path is safe to use
         os.rmdir(checkout_path)
         print("Copying {} to {}".format(path,checkout_path))
         shutil.copytree(path, checkout_path, symlinks=True)

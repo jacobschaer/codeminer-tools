@@ -34,16 +34,16 @@ class SVNClient:
         command = ['svn', subcommand]
         for arg in args:
             command.append(arg)
-            
+
         if flags:
             for flag in flags:
                 dashes = '-' if len(flag) == 1 else '--'
                 command.append('{dashes}{flag}'.format(dashes=dashes, flag=flag))
-        
+
         for flag, value in kwargs.items():
             dashes = '-' if len(flag) == 1 else '--'
-            command.append('{dashes}{flag} {value}'.format(dashes=dashes,
-               flag=flag, value=value))
+            command.append('{dashes}{flag}'.format(dashes=dashes, flag=flag))
+            command.append(value)
 
         print('$ {command}'.format(command=' '.join(command)))
 
@@ -80,4 +80,61 @@ class SVNRepository(Repository):
         return xmltodict.parse(out)['info']['entry']
 
     def get_changes(self, rev):
-        pass
+        rev = int(rev)
+        args = []
+        kwargs = {'r' : str(rev)}
+        flags = ['xml', 'v']
+
+        out, err = self.client.run_subcommand('log', *args, flags=flags,
+                                              cwd=self.path, **kwargs)
+        print(out)
+        tree = ET.fromstring(out)
+        changes = list()
+        for path in tree.find('logentry/paths'):
+            action_string = path.get('action')
+            copyfrom_path = path.get('copyfrom-path', None)
+            # Copies are marked as 'A' by SVN but have metadata
+            # that indicates otherwise
+            if copyfrom_path is not None:
+                action_string = 'C'
+
+            if action_string == 'A':
+                action = ChangeType.add
+                current_path = path.text[1:]
+                current_revision = str(rev)
+                previous_path = None
+                previous_revision = None
+            elif action_string == 'C':
+                action = ChangeType.copy
+                current_path = path.text[1:]
+                current_revision = str(rev)
+                previous_path = path.get('copyfrom-path')[1:]
+                previous_revision = path.get('copyfrom-rev')
+            elif action_string == 'D':
+                action = ChangeType.remove
+                current_path = None
+                current_revision = None
+                previous_path = path.text[1:]
+                previous_revision = str(rev - 1)
+            elif action_string == 'M':
+                action = ChangeType.modify
+                current_path = path.text[1:]
+                current_revision = str(rev)
+                previous_path = path.text[1:]
+                previous_revision = str(rev - 1)
+
+
+            changes.append(Change(self, previous_path, previous_revision,
+               current_path, current_revision, action))
+        return changes
+
+    def get_object(self, path, rev=None):
+        if rev:
+            args = ['{path}@{rev}'.format(path=path, rev=rev)]
+        else:
+            args = [path]
+        kwargs = {}
+        flags = []
+        out, err = self.client.run_subcommand('cat', *args, flags=flags,
+                                              cwd=self.path, **kwargs)
+        return out

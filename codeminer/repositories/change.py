@@ -16,6 +16,45 @@ class ChangeSet:
         self.message = message
         self.timestamp = timestamp
 
+    def optimize(self):
+        removes = []
+        copies = []
+        adds = []
+
+        for change in self.changes:
+            if change.action == ChangeType.add:
+                adds.append(change)
+            elif change.action == ChangeType.copy:
+                copies.append(change)
+            elif change.action == ChangeType.remove:
+                removes.append(change)
+
+        # Look for copies that are really "moves"
+        # Note, somewhat confusingly this logic allows the possibility
+        # for a file to be "moved" to multiple other files
+        redundant = []
+        for copy in copies:
+            for remove in removes:
+                if copy.previous_path == remove.previous_path:
+                    copy.action = ChangeType.move
+                    redundant.append(remove)
+                    break
+
+        # Filter out the redundant changes
+        combined = [x for x in self.changes if x not in redundant]
+
+        # Go through and look for 'Derived' which are copy/move + modify
+        for commit in combined:
+            if ((commit.action == ChangeType.move) or
+                (commit.action == ChangeType.copy)):
+                old_contents = commit.repository.get_object(commit.previous_path, commit.previous_revision)
+                new_contents = commit.repository.get_object(commit.current_path, commit.current_revision)
+                if old_contents.read() != new_contents.read():
+                    commit.action = ChangeType.derived
+        
+        self.changes = combined
+
+
 class Change:
     """ Represents a change between to revisions of an object in a repository"""
     def __init__(self, repository, previous_path, previous_revision, current_path,

@@ -74,37 +74,38 @@ class TestHgReads(unittest.TestCase):
         file_object = sut.get_object("a.txt", rev=0)
         self.assertEqual(file_object.read(), "a")
 
-    def test_get_changes(self):
+    def test_get_changeset(self):
         sut = hg.open_repository(self.repository_path)
-        changeset = sut.get_changes('0')
-        self.assertEqual(changeset,
+        changeset = sut.get_changeset('0')
+        self.assertEqual(changeset.changes,
             [change.Change(sut, None, None, "a.txt", '0', change.ChangeType.add)])
 
     def test_get_modify_change(self):
         sut = hg.open_repository(self.repository_path)
-        changeset = sut.get_changes('1')
+        changeset = sut.get_changeset('1').changes
         self.assertEqual(changeset[0].action, change.ChangeType.modify)
 
     def test_get_copy_change(self):
         sut = hg.open_repository(self.repository_path)
-        changeset = sut.get_changes('2')
+        changeset = sut.get_changeset('2').changes
         self.assertEqual(changeset[0].action, change.ChangeType.copy)
 
     def test_get_rename_change(self):
         sut = hg.open_repository(self.repository_path)
-        changeset = sut.get_changes('3')
-        self.assertEqual(changeset[0].action, change.ChangeType.move)
+        changeset = sut.get_changeset('3')
+        changeset.optimize()
+        self.assertEqual(changeset.changes[0].action, change.ChangeType.move)
 
     def test_get_remove_change(self):
         sut = hg.open_repository(self.repository_path)
-        changeset = sut.get_changes('4')
+        changeset = sut.get_changeset('4').changes
         self.assertEqual(changeset[0].action, change.ChangeType.remove)
 
     def test_get_derived_change(self):
         sut = hg.open_repository(self.repository_path)
-        changeset = sut.get_changes('5')
-        self.assertEqual(changeset[0].action, change.ChangeType.derived)
-
+        changeset = sut.get_changeset('5')
+        changeset.optimize()
+        self.assertEqual(changeset.changes[0].action, change.ChangeType.derived)
 
     def test_walk_history(self):
         sut = hg.open_repository(self.repository_path)

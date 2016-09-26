@@ -46,22 +46,42 @@ class HgRepository(Repository):
             author = record.author.decode()
             desc = record.desc.decode()
             date = record.date
-            changes = self.get_changes(rev)
+            changes = self.get_status(rev=rev)
             yield ChangeSet(changes, tags, rev, author, desc, date)
 
     @change_dir
-    def get_changes(self, rev):
-        if not rev:
-            raise Exception("Revision Number Required")
-
-        rev = str(rev)
+    def get_changeset(self, rev=None):
         parent_rev = None
 
-        parents = self.client.parents(rev=rev.encode())
+        if rev is None:
+            log = self.client.log(revrange=b"tip")
+        else:
+            rev = str(rev)
+            log = self.client.log(revrange=rev.encode())
+
+        rev = log[0].rev.decode()
+        node = log[0].node.decode()
+        tags = log[0].tags.decode()
+        branch = log[0].branch.decode()
+        author = log[0].author.decode()
+        desc = log[0].desc.decode()
+        date = log[0].date
+        changes = self.get_status(rev=rev)
+
+        return ChangeSet(changes, tags, rev, author, desc, date)
+
+    @change_dir
+    def get_status(self, rev=None):
+        parent_rev = None
+        if rev is not None:
+            status = self.client.status(change=rev.encode(), copies=True)
+            parents = self.client.parents(rev=rev.encode())
+        else:
+            status = self.client.status(copies=True)
+            parents = self.client.parents(rev=b"tip")
+
         if parents:
             parent_rev = parents[0].rev.decode()
-
-        status = self.client.status(change=rev.encode(), copies=True)
 
         changes = list()
         copies = list()
@@ -105,33 +125,8 @@ class HgRepository(Repository):
                 current_revision,  # Current Revision
                 action             # Action
             )
-            if (change.action == ChangeType.copy):
-                copies.append(change)
-            else:
-                changes.append(change)
-
-        # Go through and find 'Moves' which are copies + removes
-        # TODO: Consider case where multiple copies one source
-        removes = list()
-        for copy in copies:
-            for change in changes:
-                if ((change.action == ChangeType.remove) and
-                    (copy.previous_path == change.previous_path)):
-                    copy.action = ChangeType.move
-                    removes.append(change)
-                    break
-
-        combined = [change for change in changes + copies if change not in removes]
-
-        # Go through and look for 'Derived' which are copy/move + modify
-        for commit in combined:
-            if ((commit.action == ChangeType.move) or
-                (commit.action == ChangeType.copy)):
-                old_contents = self.get_object(commit.previous_path, commit.previous_revision)
-                new_contents = self.get_object(commit.current_path, commit.current_revision)
-                if old_contents.read() != new_contents.read():
-                    commit.action = ChangeType.derived
-        return combined
+            changes.append(change)
+        return changes
 
     @change_dir
     def get_object(self, path, rev=None):

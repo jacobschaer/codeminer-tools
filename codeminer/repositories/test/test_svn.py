@@ -56,7 +56,7 @@ class TestSVNReads(unittest.TestCase):
         run_shell_command('svn up', cwd=self.repo_working_directory)
         sut = svn.open_repository(self.repo_working_directory)
         revision = sut.info()['commit']['@revision']
-        changes = sut.get_changes(revision)
+        changes = sut.get_changeset(revision).changes
         self.assertEqual(changes, [change.Change(sut, None, None, "a.txt", revision, change.ChangeType.add)])
 
     def test_get_remove_files(self):
@@ -70,7 +70,7 @@ class TestSVNReads(unittest.TestCase):
         run_shell_command('svn up', cwd=self.repo_working_directory)
         sut = svn.open_repository(self.repo_working_directory)
         revision = sut.info()['commit']['@revision']
-        changes = sut.get_changes(revision)
+        changes = sut.get_changeset(revision).changes
         self.assertEqual(changes, [change.Change(sut, "a.txt", str(int(revision) - 1), None, None, change.ChangeType.remove)])
 
     def test_get_copy_files(self):
@@ -84,7 +84,7 @@ class TestSVNReads(unittest.TestCase):
         run_shell_command('svn up', cwd=self.repo_working_directory)
         sut = svn.open_repository(self.repo_working_directory)
         revision = sut.info()['commit']['@revision']
-        changes = sut.get_changes(revision)
+        changes = sut.get_changeset(revision).changes
         self.assertEqual(changes, [change.Change(sut, "a.txt", str(int(revision) - 1), "b.txt", revision, change.ChangeType.copy)])
 
     def test_get_modified_files(self):
@@ -99,7 +99,7 @@ class TestSVNReads(unittest.TestCase):
         run_shell_command('svn up', cwd=self.repo_working_directory)
         sut = svn.open_repository(self.repo_working_directory)
         revision = sut.info()['commit']['@revision']
-        changes = sut.get_changes(revision)
+        changes = sut.get_changeset(revision).changes
         self.assertEqual(changes, [change.Change(sut, "a.txt", str(int(revision) - 1), "a.txt", revision, change.ChangeType.modify)])
 
     def test_get_object(self):

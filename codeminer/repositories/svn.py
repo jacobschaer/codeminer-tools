@@ -79,16 +79,29 @@ class SVNRepository(Repository):
                                               cwd=self.path, **kwargs)
         return xmltodict.parse(out)['info']['entry']
 
-    def get_changes(self, rev):
+    def get_changeset(self, rev=None):
         rev = int(rev)
         args = []
-        kwargs = {'r' : str(rev)}
+        if rev is not None:
+            kwargs = {'r' : str(rev)}
+        else:
+            kwargs = {}
         flags = ['xml', 'v']
 
         out, err = self.client.run_subcommand('log', *args, flags=flags,
                                               cwd=self.path, **kwargs)
         print(out)
-        tree = ET.fromstring(out)
+        revision, author, timestamp, message, changes = self._read_log_xml(out)
+        return ChangeSet(changes, None, revision, author, message, timestamp)
+
+    def _read_log_xml(self, log):
+        tree = ET.fromstring(log)
+
+        author = tree.find('logentry/author').text
+        date = tree.find('logentry/date').text
+        message = tree.find('logentry/msg').text
+        revision = int(tree.find('logentry').get('revision'))
+
         changes = list()
         for path in tree.find('logentry/paths'):
             action_string = path.get('action')
@@ -101,13 +114,13 @@ class SVNRepository(Repository):
             if action_string == 'A':
                 action = ChangeType.add
                 current_path = path.text[1:]
-                current_revision = str(rev)
+                current_revision = str(revision)
                 previous_path = None
                 previous_revision = None
             elif action_string == 'C':
                 action = ChangeType.copy
                 current_path = path.text[1:]
-                current_revision = str(rev)
+                current_revision = str(revision)
                 previous_path = path.get('copyfrom-path')[1:]
                 previous_revision = path.get('copyfrom-rev')
             elif action_string == 'D':
@@ -115,18 +128,19 @@ class SVNRepository(Repository):
                 current_path = None
                 current_revision = None
                 previous_path = path.text[1:]
-                previous_revision = str(rev - 1)
+                previous_revision = str(revision - 1)
             elif action_string == 'M':
                 action = ChangeType.modify
                 current_path = path.text[1:]
-                current_revision = str(rev)
+                current_revision = str(revision)
                 previous_path = path.text[1:]
-                previous_revision = str(rev - 1)
-
+                previous_revision = str(revision - 1)
 
             changes.append(Change(self, previous_path, previous_revision,
                current_path, current_revision, action))
-        return changes
+
+        return revision, author, date, message, changes
+
 
     def get_object(self, path, rev=None):
         if rev:

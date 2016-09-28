@@ -10,53 +10,30 @@ import xmltodict
 
 from codeminer.repositories.repository import Repository
 from codeminer.repositories.change import ChangeType, Change, ChangeSet
+from codeminer.repositories.commandlineclient import CommandLineClient
 
 def open_repository(path, workspace=None, **kwargs):
-    checkout_path = tempfile.mkdtemp(dir=workspace)
-    client = SVNClient()
     if os.path.exists(path):
-        # Remove the checkout path so we can use copytree() which
-        # requires the path must not exist. We're only using mkdtemp()
-        # to ensure the file path is safe to use
-        os.rmdir(checkout_path)
-        print("Copying {} to {}".format(path,checkout_path))
-        shutil.copytree(path, checkout_path, symlinks=True)
+        return SVNRepository(path)
     else:
-        client.run_subcommand('clone', path, cwd=checkout_path)
-    return SVNRepository(checkout_path, cleanup=True)
+        basename = os.path.basename(path)
+        revision = None
+        if '@' in basename:
+            basename, revision = basename.split('@')
+        checkout_path = tempfile.mkdtemp(dir=workspace)
+        client = CommandLineClient('svn')
+        if revision is not None:
+            client.run_subcommand('checkout', path, cwd=checkout_path)
+        else:
+            client.run_subcommand('checkout', path, cwd=checkout_path)
 
-class SVNClient:
-    def __init__(self, username=None, password=None, *args, **kwargs):
-        self.username = username
-        self.password = password
-
-    def run_subcommand(self, subcommand, *args, flags=None, cwd=None, **kwargs):
-        command = ['svn', subcommand]
-        for arg in args:
-            command.append(arg)
-
-        if flags:
-            for flag in flags:
-                dashes = '-' if len(flag) == 1 else '--'
-                command.append('{dashes}{flag}'.format(dashes=dashes, flag=flag))
-
-        for flag, value in kwargs.items():
-            dashes = '-' if len(flag) == 1 else '--'
-            command.append('{dashes}{flag}'.format(dashes=dashes, flag=flag))
-            command.append(value)
-
-        print('$ {command}'.format(command=' '.join(command)))
-
-        result = subprocess.run(command, stdout=subprocess.PIPE,
-                                stderr=subprocess.PIPE, cwd=cwd)
-
-        return result.stdout, result.stderr
-
+        working_copy_path = os.path.join(checkout_path, os.path.basename(path))
+        return SVNRepository(working_copy_path, cleanup=True)
 
 class SVNRepository(Repository):
     def __init__(self, path, cleanup=False):
         self.path = path
-        self.client = SVNClient()
+        self.client = CommandLineClient('svn')
         self.cleanup = cleanup
 
     def __del__(self):
@@ -79,6 +56,9 @@ class SVNRepository(Repository):
                                               cwd=self.path, **kwargs)
         return xmltodict.parse(out)['info']['entry']
 
+    def walk_history(self):
+        pass
+
     def get_changeset(self, rev=None):
         rev = int(rev)
         args = []
@@ -90,7 +70,7 @@ class SVNRepository(Repository):
 
         out, err = self.client.run_subcommand('log', *args, flags=flags,
                                               cwd=self.path, **kwargs)
-        print(out)
+        print(out, err)
         revision, author, timestamp, message, changes = self._read_log_xml(out)
         return ChangeSet(changes, None, revision, author, message, timestamp)
 

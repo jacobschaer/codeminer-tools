@@ -1,5 +1,6 @@
 import mock
 import os
+import re
 import shlex
 import shutil
 import stat
@@ -10,7 +11,25 @@ import unittest
 from codeminer.repositories import cvs, change
 from test_utils import run_shell_command
 
+def get_head_version(client, path, filename):
+    args = ['-rHEAD', filename]
+    kwargs = {}
+    flags = []
+    out, err = client.run_subcommand('log', *args, flags=flags,
+                                          cwd=path, **kwargs)
+    version = re.search(b"^head:\s+((?:\d+\.)+\d+)", out, re.MULTILINE).group(1).decode()
+    return version
+
+global_commit_counter = 0
+
 class TestCVSReads(unittest.TestCase):
+    global_commit_counter = 0
+
+    def generate_logmsg(self):
+        global global_commit_counter
+        global_commit_counter += 1
+        return "Commit {commit}".format(commit=global_commit_counter)
+
     @classmethod
     def setUpClass(cls):
         cls.server_root = tempfile.mkdtemp()
@@ -32,14 +51,48 @@ class TestCVSReads(unittest.TestCase):
         shutil.rmtree(cls.source_root)
 
     def test_get_add_files(self):
-        test_file = os.path.join(self.repo_working_directory, 'a.txt')
-        with open(test_file, 'w') as test_file:
+        test_file_path = os.path.join(self.repo_working_directory, 'a.txt')
+        with open(test_file_path, 'w') as test_file:
             test_file.write('a')
         run_shell_command('cvs add a.txt', cwd=self.repo_working_directory, env=self.env)
-        run_shell_command('cvs commit -m "Test"', cwd=self.repo_working_directory, env=self.env)
+        run_shell_command('cvs commit -m "{commit}"'.format(commit=self.generate_logmsg()), cwd=self.repo_working_directory, env=self.env)
         sut = cvs.open_repository(self.repo_working_directory)
+        version = get_head_version(sut.client, sut.path, 'a.txt')
         changes = sut.get_changeset().changes
-        self.assertEqual(changes, [change.Change(sut, None, None, "a.txt", '1.1', change.ChangeType.add)])
+        self.assertEqual(changes, [change.Change(sut, None, None, "a.txt", version, change.ChangeType.add)])
+
+    def test_get_remove_files(self):
+        test_file_path = os.path.join(self.repo_working_directory, 'r.txt')
+        with open(test_file_path, 'w') as test_file:
+            test_file.write('r')
+        run_shell_command('cvs add r.txt', cwd=self.repo_working_directory, env=self.env)
+        run_shell_command('cvs commit -m "{commit}"'.format(commit=self.generate_logmsg()), cwd=self.repo_working_directory, env=self.env)
+        os.remove(test_file_path)
+        run_shell_command('cvs remove r.txt', cwd=self.repo_working_directory, env=self.env)
+        run_shell_command('cvs commit -m "{commit}"'.format(commit=self.generate_logmsg()), cwd=self.repo_working_directory, env=self.env)
+        sut = cvs.open_repository(self.repo_working_directory)
+        version = get_head_version(sut.client, sut.path, 'r.txt')
+        major, minor = version.split('.')
+        previous_version = "{major}.{minor}".format(major=major, minor=(int(minor) - 1))
+        changes = sut.get_changeset().changes
+        self.assertEqual(changes, [change.Change(sut, "r.txt", previous_version, "r.txt", version, change.ChangeType.remove)])
+
+    def test_get_modify_files(self):
+        test_file_path = os.path.join(self.repo_working_directory, 'm.txt')
+        with open(test_file_path, 'w') as test_file:
+            test_file.write('a')
+        run_shell_command('cvs add m.txt', cwd=self.repo_working_directory, env=self.env)
+        run_shell_command('cvs commit -m "{commit}"'.format(commit=self.generate_logmsg()), cwd=self.repo_working_directory, env=self.env)
+        with open(test_file_path, 'a') as test_file:
+            test_file.write('b')
+        run_shell_command('cvs commit -m "{commit}"'.format(commit=self.generate_logmsg()), cwd=self.repo_working_directory, env=self.env)
+        sut = cvs.open_repository(self.repo_working_directory)
+        version = get_head_version(sut.client, sut.path, 'm.txt')
+        major, minor = version.split('.')
+        previous_version = "{major}.{minor}".format(major=major, minor=(int(minor) - 1))
+        changes = sut.get_changeset().changes
+        self.assertEqual(changes, [change.Change(sut, "m.txt", previous_version, "m.txt", version, change.ChangeType.modify)])
+
 
     # def test_get_remove_files(self):
     #     test_file = os.path.join(self.repo_working_directory, 'a.txt')

@@ -2,12 +2,16 @@ import hashlib
 import os
 import shutil
 import subprocess
+from typing import Dict, List, Optional, Union
 
 import xml.etree.ElementTree as ET
 
 from codeminer.repositories.change import ChangeType, Change, ChangeSet
 from codeminer.repositories.commandlineclient import CommandLineClient
 from codeminer.repositories.repository import Repository
+
+class CVSException(Exception):
+    pass
 
 def open_repository(path, cvs_root=None, workspace=None, **kwargs):
     if os.path.exists(path):
@@ -43,13 +47,54 @@ class CVSRepository(Repository):
             '--xml', '--noxmlns', '--lines-modified', '--tags', '--follow'], stdout=subprocess.PIPE,
             stderr=subprocess.PIPE, stdin=pipe, cwd=cwd, env=env)
 
+    def add(self, files : Union[List[str], str], message : str, rcs_kflag : str = None, *args : str, **kwargs : str):
+        """Add a new file/directory to the repository
+
+        Parameters
+        ----------
+        files : str or list of str
+            Files to be added
+        message : str
+            Use this "message" for the creation log
+        rcs_kflag : str, optional
+            Add the file with the specified kflag.
+
+        Raises
+        ------
+
+        """
+        options = {}
+        flags = []
+        arguments = []
+
+        if type(files) == str:
+            arguments.append(files)
+        else:
+            arguments += files
+
+        options['m'] = message
+
+        if rcs_kflag is not None:
+            options['k'] = rcs_kflag
+
+        for arg in args:
+            flags.append(arg)
+
+        for kwarg in kwargs:
+            options[kwarg] = kwargs[kwarg]
+
+        result = self.client.run_subcommand('add', *arguments, flags=flags, cwd=self.path, **options)
+        if result.returncode != 0:
+            raise CVSException(result.stderr)
+
     def get_changeset(self, rev='HEAD'):
         args = ['-r{rev}'.format(rev=rev)]
         kwargs = {}
         flags = []
 
-        out, err = self.client.run_subcommand('log', *args, flags=flags,
+        p1,p2 = self.client.run_subcommand('log', *args, flags=flags,
             cwd=self.path, pipe_out=self._cvs2cl, **kwargs)
+        out, err, exit = p2.stdout, p2.stderr, p2.returncode
         print(out, err)
 
         tags = None

@@ -52,9 +52,9 @@ class SVNRepository(Repository):
         elif rev:
             kwargs['r'] = rev
 
-        out, err = self.client.run_subcommand('info', *args, flags=flags,
+        result = self.client.run_subcommand('info', *args, flags=flags,
                                               cwd=self.path, **kwargs)
-        return xmltodict.parse(out)['info']['entry']
+        return xmltodict.parse(result.stdout)['info']['entry']
 
     def walk_history(self):
         pass
@@ -68,8 +68,9 @@ class SVNRepository(Repository):
             kwargs = {}
         flags = ['xml', 'v']
 
-        out, err = self.client.run_subcommand('log', *args, flags=flags,
+        result = self.client.run_subcommand('log', *args, flags=flags,
                                               cwd=self.path, **kwargs)
+        out, err = result.stdout, result.stderr
         print(out, err)
         revision, author, timestamp, message, changes = self._read_log_xml(out)
         return ChangeSet(changes, None, revision, author, message, timestamp)
@@ -129,6 +130,6 @@ class SVNRepository(Repository):
             args = [path]
         kwargs = {}
         flags = []
-        out, err = self.client.run_subcommand('cat', *args, flags=flags,
+        result = self.client.run_subcommand('cat', *args, flags=flags,
                                               cwd=self.path, **kwargs)
-        return out
+        return result.stdout

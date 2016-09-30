@@ -23,7 +23,7 @@ class CommandLineClient:
         print('$ {command}'.format(command=' '.join(command)))
 
         if pipe_out is None:
-            result = subprocess.run(command, stdout=subprocess.PIPE,
+            return subprocess.run(command, stdout=subprocess.PIPE,
                                     stderr=subprocess.PIPE, cwd=cwd, env=self.env)
         else:
             p1 = subprocess.Popen(command, stdout=subprocess.PIPE,
@@ -32,6 +32,6 @@ class CommandLineClient:
             p1.stdout.close()
             p1.stderr.close()
             out, error = p2.communicate()
-            return out, error
-
-        return result.stdout, result.stderr
+            p2.stderr = error
+            p2.stdout = out
+            return p1, p2

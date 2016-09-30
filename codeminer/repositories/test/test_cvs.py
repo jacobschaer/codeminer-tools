@@ -6,6 +6,7 @@ import shutil
 import stat
 import subprocess
 import tempfile
+import time
 import unittest
 
 from codeminer.repositories import cvs, change
@@ -15,12 +16,23 @@ def get_head_version(client, path, filename):
     args = ['-rHEAD', filename]
     kwargs = {}
     flags = []
-    out, err = client.run_subcommand('log', *args, flags=flags,
+    result = client.run_subcommand('log', *args, flags=flags,
                                           cwd=path, **kwargs)
-    version = re.search(b"^head:\s+((?:\d+\.)+\d+)", out, re.MULTILINE).group(1).decode()
+    version = re.search(b"^head:\s+((?:\d+\.)+\d+)", result.stdout, re.MULTILINE).group(1).decode()
     return version
 
 global_commit_counter = 0
+
+class TestCVSCommandLines(unittest.TestCase):
+    @mock.patch('codeminer.repositories.commandlineclient.subprocess.run')
+    def test_add_single_file(self, runmock):
+        runmock.return_value = mock.Mock(returncode=0)
+
+        self.sut = cvs.CVSRepository('')
+        self.sut.add('a.txt', "asdf")
+        args, kwargs = runmock.call_args
+        self.assertEqual((['cvs', 'add', 'a.txt', '-m', 'asdf'],), args)
+
 
 class TestCVSReads(unittest.TestCase):
     global_commit_counter = 0
@@ -83,8 +95,9 @@ class TestCVSReads(unittest.TestCase):
             test_file.write('a')
         run_shell_command('cvs add m.txt', cwd=self.repo_working_directory, env=self.env)
         run_shell_command('cvs commit -m "{commit}"'.format(commit=self.generate_logmsg()), cwd=self.repo_working_directory, env=self.env)
+        time.sleep(1) # CVS commits aren't synchronous
         with open(test_file_path, 'a') as test_file:
-            test_file.write('b')
+            test_file.write('\nb\n')
         run_shell_command('cvs commit -m "{commit}"'.format(commit=self.generate_logmsg()), cwd=self.repo_working_directory, env=self.env)
         sut = cvs.open_repository(self.repo_working_directory)
         version = get_head_version(sut.client, sut.path, 'm.txt')

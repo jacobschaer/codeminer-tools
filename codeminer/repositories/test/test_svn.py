@@ -111,7 +111,7 @@ class TestSVNReads(unittest.TestCase):
         run_shell_command('svn up', cwd=self.repo_working_directory)
         sut = svn.open_repository(self.repo_working_directory)
         revision = sut.info()['commit']['@revision']
-        self.assertEqual(sut.get_object('a.txt', rev=revision), b'a')
+        self.assertEqual(sut.get_object('a.txt', rev=revision).read(), b'a')
 
 if __name__ == '__main__':
     unittest.main()

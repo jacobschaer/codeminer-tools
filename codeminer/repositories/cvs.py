@@ -3,12 +3,12 @@ from io import BytesIO
 import os
 import shutil
 import subprocess
-from typing import Dict, List, Optional, Union, Tuple
 
 import xml.etree.ElementTree as ET
 
+from codeminer.clients.commandline import CommandLineClient
+from codeminer.clients.cvs import CVSClient
 from codeminer.repositories.change import ChangeType, Change, ChangeSet
-from codeminer.repositories.commandlineclient import CommandLineClient
 from codeminer.repositories.repository import Repository
 
 def open_repository(path, cvs_root=None, workspace=None, **kwargs):
@@ -17,22 +17,14 @@ def open_repository(path, cvs_root=None, workspace=None, **kwargs):
     else:
         basename = os.path.basename(path)
         checkout_path = tempfile.mkdtemp(dir=workspace)
-        client = CommandLineClient('cvs')
-        client.run_subcommand('checkout', path, cwd=checkout_path)
+        client = CVSClient()
+        client.checkout(path=path, cwd=checkout_path)
         working_copy_path = os.path.join(checkout_path, os.path.basename(path))
         return CVSRepository(working_copy_path, cvs_root=cvs_root, cleanup=True)
 
-class CVSException(Exception):
-    pass
-
-
 class CVSRepository(Repository):
     def __init__(self, path, cvs_root=None, cleanup=False):
-        env = os.environ.copy()
-        if cvs_root is not None:
-            env['CVSROOT'] = cvs_root
-
-        self.client = CommandLineClient('cvs', env=env)
+        self.client = CVSClient(cvs_root=cvs_root, cwd=path)
         self.path = path
         self.cleanup = cleanup
 
@@ -40,302 +32,9 @@ class CVSRepository(Repository):
         if self.cleanup:
             shutil.rmtree(self.path)
 
-    @staticmethod
-    def _cvs2cl(pipe, cwd=None, env=None):
-        cvs2cl = os.path.join(os.path.abspath(
-            os.path.dirname(__file__)), '..', 'tools', 'cvs2cl.pl')
-
-        return subprocess.Popen(['perl', cvs2cl, '--stdin', '--stdout', 
-            '--xml', '--noxmlns', '--lines-modified', '--tags', '--follow'],
-            stdout=subprocess.PIPE, stderr=subprocess.PIPE, stdin=pipe,
-            cwd=cwd, env=env)
-
-    def add(self, files : Union[List[str], str], message : str = None,
-        rcs_kflag : str = None, *args : str, **kwargs : str) -> Tuple[str,str]:
-        """Add a new file/directory to the repository
-
-        Parameters
-        ----------
-        files : str or list of str
-            Files to be added
-        message : str, optional
-            Use this "message" for the creation log
-        rcs_kflag : str, optional
-            Add the file with the specified kflag.
-
-        Returns
-        -------
-        stdout : str
-            The standard output from the cvs command
-        stderr : str
-            The error output from the cvs command
-
-        Raises
-        ------
-        CVSException
-            If the cvs program returns an error code
-
-        """
-        options = {}
-        flags = []
-        arguments = []
-
-        if type(files) == str:
-            arguments.append(files)
-        else:
-            arguments += files
-
-        if message is not None:
-            options['m'] = message
-
-        if rcs_kflag is not None:
-            options['k'] = rcs_kflag
-
-        for arg in args:
-            flags.append(arg)
-
-        for kwarg in kwargs:
-            options[kwarg] = kwargs[kwarg]
-
-        result = self.client.run_subcommand('add', *arguments, flags=flags,
-            cwd=self.path, **options)
-        if result.returncode != 0:
-            raise CVSException(result.stderr)
-        else:
-            return result.stdout, result.stderr
-
-    def checkout(self, path : str = None,
-        reset : bool = False, no_shorten : bool = False, prune : bool = False,
-        recursive : bool = False, cat : bool = False, force : bool = False,
-        local_directory : bool = False, no_module : bool = False,
-        stdout : bool = False, status : bool = False, revision : str = None,
-        date : str = None, dir : str = None, kopt : str = None,
-        merge : bool = None, *args : str, **kwargs : str) -> Tuple[str,str]:
-        """Checkout sources for editing
-
-        Parameters
-        ----------
-        reset : bool
-            Reset any sticky tags/date/kopts.
-        no_shorten : bool
-            Don't shorten module paths if -d specified.
-        prune : bool
-            Prune empty directories.
-        recursive : bool
-            Process directories recursively.
-        cat : bool
-            "cat" the module database.
-        force : bool
-            Force a head revision match if tag/date not found.
-        local_directory : bool
-            Local directory only, not recursive
-        no_module : bool
-            Do not run module program (if any).
-        stdout : bool
-            Check out files to standard output (avoids stickiness).
-        status : bool
-            Like -c, but include module status.
-        revision : str
-            Check out revision or tag. (implies -P) (is sticky)
-        date : str
-            Check out revisions as of date. (implies -P) (is sticky)
-        dir : str
-            Check out into dir instead of module name.
-        kopt : str
-            Use RCS kopt -k option on checkout. (is sticky)
-        merge : str
-            Merge in changes made between current revision and rev.
-
-        Returns
-        -------
-        stdout : str
-            The standard output from the cvs command
-        stderr : str
-            The error output from the cvs command
-
-        Raises
-        ------
-        CVSException
-            If the cvs program returns an error code
-
-        """
-        options = {}
-        flags = []
-        arguments = []
-
-        if path is not None:
-            arguments.append(path)
-
-        if reset:
-            flags.append('A')
-        if no_shorten:
-            flags.append('N')
-        if prune:
-            flags.append('P')
-        if recursive:
-            flags.append('R')
-        if cat:
-            flags.append('c')
-        if force:
-            flags.append('f')
-        if local_directory:
-            flags.append('l')
-        if no_module:
-            flags.append('n')
-        if stdout:
-            flags.append('p')
-        if status:
-            flags.append('s')
-
-        if revision is not None:
-            options['r'] = revision
-        if date is not None:
-            options['D'] = date
-        if dir is not None:
-            options['d'] = dir
-        if kopt is not None:
-            options['k'] = kopt
-        if merge is not None:
-            options['j'] = merge
-
-        for arg in args:
-            flags.append(arg)
-
-        for kwarg in kwargs:
-            options[kwarg] = kwargs[kwarg]
-
-        result = self.client.run_subcommand('checkout', *arguments, flags=flags,
-            cwd=self.path, **options)
-        if result.returncode != 0:
-            raise CVSException(result.stderr)
-        else:
-            return result.stdout, result.stderr
-
-    def commit(self, message : str, files : Union[List[str], str] = [],
-        recursive : bool = False, local_directory : bool = False,
-        force : bool = False, revision : str = None,
-        *args : str, **kwargs : str) -> Tuple[str,str]:
-        """Check files into the repository
-
-        Parameters
-        ----------
-        message : str
-            Log message.
-        files : str or list of str, optional
-            Files to be commited, default is current working directory
-        recursive : bool, optional
-            Process directories recursively.
-        local_directory : bool, optional
-            Local directory only (not recursive).
-        force: bool, optional
-            Force the file to be committed; disables recursion.
-        revision : str, optional
-            Commit to this branch or trunk revision.
-
-        Returns
-        -------
-        stdout : str
-            The standard output from the cvs command
-        stderr : str
-            The error output from the cvs command
-
-        Raises
-        ------
-        CVSException
-            If the cvs program returns an error code
-
-        """
-        options = {}
-        flags = []
-        arguments = []
-
-        if type(files) == str:
-            arguments.append(files)
-        else:
-            arguments += files
-
-        options['m'] = message
-
-        if recursive:
-            flags.append('R')
-        if local_directory:
-            flags.append('l') 
-        if force:
-            flags.append('f')
-        if revision is not None:
-            options['r'] = revision
-
-        for arg in args:
-            flags.append(arg)
-
-        for kwarg in kwargs:
-            options[kwarg] = kwargs[kwarg]
-
-        result = self.client.run_subcommand('commit', *arguments, flags=flags,
-            cwd=self.path, **options)
-        if result.returncode != 0:
-            raise CVSException(result.stderr)
-        else:
-            return result.stdout, result.stderr
-
-    def remove(self, files : Union[List[str], str] = [],
-        delete : bool = False, local_directory : bool = False,
-        recursive : bool = False, *args : str, **kwargs : str):
-        """Remove an entry from the repository
-
-        Parameters
-        ----------
-        files : str or list of str, optional
-            Files to be commited, default is current working directory
-        delete : bool, optional
-            Delete the file before removing it.
-        local_directory : bool, optional
-            Process this directory only (not recursive).
-        recursive : bool, optional
-            Process directories recursively.
-
-        Raises
-        ------
-
-        """
-        options = {}
-        flags = []
-        arguments = []
-
-        if type(files) == str:
-            arguments.append(files)
-        else:
-            arguments += files
-
-        if delete:
-            flags.append('f')
-        if local_directory:
-            flags.append('l') 
-        if recursive:
-            flags.append('R')
-
-        for arg in args:
-            flags.append(arg)
-
-        for kwarg in kwargs:
-            options[kwarg] = kwargs[kwarg]
-
-        result = self.client.run_subcommand('remove', *arguments, flags=flags,
-            cwd=self.path, **options)
-        if result.returncode != 0:
-            raise CVSException(result.stderr)
-        else:
-            return result.stdout, result.stderr
-
     def get_changeset(self, rev='HEAD'):
-        args = ['-r{rev}'.format(rev=rev)]
-        kwargs = {}
-        flags = []
-
-        p1,p2 = self.client.run_subcommand('log', *args, flags=flags,
-            cwd=self.path, pipe_out=self._cvs2cl, **kwargs)
-        out, err, exit = p2.stdout, p2.stderr, p2.returncode
-        print(out, err)
+        out, errs = self.client.log(revisions=rev, xml=True)
+        print(out, errs)
 
         tags = None
         author, timestamp, message, changes = self._read_log_xml(out, limit=1)
@@ -366,16 +65,16 @@ class CVSRepository(Repository):
         return "{major}.{minor}".format(major, minor - 1)
 
     def get_object(self, path, revision=None):
-        repository_name = self._get_repository_name()
+        repository_name = self.get_module_name()
         real_path = os.path.join(repository_name, path)
-        out, stderr = self.checkout(
+        out, stderr = self.client.checkout(
             path = real_path, 
-            stdout = True,
-            revision = revision
+            revision = revision,
+            stdout = True
         )
         return BytesIO(out)
 
-    def _get_repository_name(self):
+    def get_module_name(self):
         """ It's possible that the directory containing the local copy does
         not have the same name as the "module" (see the -d flag). Fortunately
         we can recover the name by peeking into the CVS filesystem"""

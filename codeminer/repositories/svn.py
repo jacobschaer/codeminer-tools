@@ -10,7 +10,7 @@ import xmltodict
 
 from codeminer.repositories.repository import Repository
 from codeminer.repositories.change import ChangeType, Change, ChangeSet
-from codeminer.repositories.commandlineclient import CommandLineClient
+from codeminer.clients.commandline import CommandLineClient
 
 def open_repository(path, workspace=None, **kwargs):
     if os.path.exists(path):

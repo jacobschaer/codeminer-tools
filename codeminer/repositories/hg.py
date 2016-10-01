@@ -1,5 +1,5 @@
 import os, tempfile, shutil
-from io import StringIO
+from io import BytesIO
 
 import hglib
 from hglib.util import b
@@ -143,4 +143,4 @@ class HgRepository(Repository):
 
         args = cmdbuilder(b('cat'), r=rev, o=None, cwd=self.path, hidden=self.client.hidden, *files)
         print("hg " + ' '.join([x.decode() for x in args]))
-        return StringIO(self.client.rawcommand(args).decode())
+        return BytesIO(self.client.rawcommand(args))

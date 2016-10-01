@@ -67,12 +67,12 @@ class TestHgReads(unittest.TestCase):
     def test_get_object_at_tip(self):
         sut = hg.open_repository(self.repository_path)
         file_object = sut.get_object("b.txt")
-        self.assertEqual(file_object.read(), "b")
+        self.assertEqual(file_object.read(), b"b")
 
     def test_get_object_at_revision(self):
         sut = hg.open_repository(self.repository_path)
         file_object = sut.get_object("a.txt", rev=0)
-        self.assertEqual(file_object.read(), "a")
+        self.assertEqual(file_object.read(), b"a")
 
     def test_get_changeset(self):
         sut = hg.open_repository(self.repository_path)

@@ -7,9 +7,7 @@ class CommandLineClient:
 
     def run_subcommand(self, subcommand, *args, flags=[], cwd=None, pipe_out=None, **kwargs):
         command = [self.command, subcommand]
-        for arg in args:
-            command.append(arg)
-
+        
         if flags:
             for flag in flags:
                 dashes = '-' if len(flag) == 1 else '--'
@@ -19,6 +17,10 @@ class CommandLineClient:
             dashes = '-' if len(flag) == 1 else '--'
             command.append('{dashes}{flag}'.format(dashes=dashes, flag=flag))
             command.append(value)
+
+        for arg in args:
+            command.append(arg)
+
 
         print('$ {command}'.format(command=' '.join(command)))
 

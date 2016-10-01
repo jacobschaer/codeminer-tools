@@ -31,7 +31,7 @@ class TestCVSCommandLines(unittest.TestCase):
         self.sut = cvs.CVSRepository('')
         self.sut.add('a.txt', "asdf")
         args, kwargs = runmock.call_args
-        self.assertEqual((['cvs', 'add', 'a.txt', '-m', 'asdf'],), args)
+        self.assertEqual((['cvs', 'add', '-m', 'asdf', 'a.txt'],), args)
 
 
 class TestCVSReads(unittest.TestCase):
@@ -106,6 +106,19 @@ class TestCVSReads(unittest.TestCase):
         changes = sut.get_changeset().changes
         self.assertEqual(changes, [change.Change(sut, "m.txt", previous_version, "m.txt", version, change.ChangeType.modify)])
 
+    def test_get_repository_name(self):
+        sut = cvs.open_repository(self.repo_working_directory)
+        self.assertEqual(sut._get_repository_name(), os.path.basename(self.repo_working_directory))
+
+    def test_get_object_at_head(self):
+        test_file_path = os.path.join(self.repo_working_directory, 'b.txt')
+        with open(test_file_path, 'wb') as test_file:
+            test_file.write(b"asdf")
+        run_shell_command('cvs add b.txt', cwd=self.repo_working_directory, env=self.env)
+        run_shell_command('cvs commit -m "{commit}"'.format(commit=self.generate_logmsg()), cwd=self.repo_working_directory, env=self.env)
+        sut = cvs.open_repository(self.repo_working_directory)
+        file_obj = sut.get_object("b.txt")
+        self.assertEqual(file_obj.read(), b"asdf")
 
     # def test_get_remove_files(self):
     #     test_file = os.path.join(self.repo_working_directory, 'a.txt')

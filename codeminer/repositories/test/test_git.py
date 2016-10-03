@@ -21,16 +21,18 @@ class TestGitReads(unittest.TestCase):
         shutil.rmtree(cls.repository_path)
 
     def test_get_added_file(self):
-        with open('a.txt', 'w') as out_file:
+        file_path = os.path.join(self.repository_path, 'a.txt')
+        with open(file_path, 'w') as out_file:
             out_file.write("a")
         command = 'git add a.txt'
         subprocess.run(shlex.split(command), cwd=self.repository_path)
         command = 'git commit -m "Added file"'
         subprocess.run(shlex.split(command), cwd=self.repository_path)
         sut = git.open_repository(self.repository_path)
-        changeset = sut.get_changes(0)
-        self.assertEqual(changeset,
-            [change.Change(sut, None, None, "a.txt", '0', change.ChangeType.add)])
+        print(sut.client.commit().message)
+        changeset = sut.get_changeset()
+        self.assertEqual(changeset.changes,
+            [change.Change(sut, None, None, "a.txt", sut.client.commit().binsha, change.ChangeType.add)])
 
 
 

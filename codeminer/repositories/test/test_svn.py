@@ -102,7 +102,7 @@ class TestSVNReads(unittest.TestCase):
         changes = sut.get_changeset(revision).changes
         self.assertEqual(changes, [change.Change(sut, "a.txt", str(int(revision) - 1), "a.txt", revision, change.ChangeType.modify)])
 
-    def test_get_object(self):
+    def test_get_file_contents(self):
         test_file_path = os.path.join(self.repo_working_directory, 'a.txt')
         with open(test_file_path, 'wb') as test_file:
             test_file.write(b'a')
@@ -111,7 +111,7 @@ class TestSVNReads(unittest.TestCase):
         run_shell_command('svn up', cwd=self.repo_working_directory)
         sut = svn.open_repository(self.repo_working_directory)
         revision = sut.info()['commit']['@revision']
-        self.assertEqual(sut.get_object('a.txt', rev=revision).read(), b'a')
+        self.assertEqual(sut.get_file_contents('a.txt', revision=revision).read(), b'a')
 
 if __name__ == '__main__':
     unittest.main()

@@ -13,6 +13,7 @@ class CVSClient(CommandLineClient):
         if cvs_root is not None:
             env['CVSROOT'] = cvs_root
         self.cwd = cwd
+        self.name = 'CVS'
         super().__init__(binary, env=env)
 
     @classmethod
@@ -86,7 +87,7 @@ class CVSClient(CommandLineClient):
 
         out, errs = result.communicate()
         if result.returncode != 0:
-            raise CVSException(result.stderr)
+            raise CVSException(errs)
         else:
             return out, errs
 
@@ -201,7 +202,7 @@ class CVSClient(CommandLineClient):
 
         out, errs = result.communicate()
         if result.returncode != 0:
-            raise CVSException(result.stderr)
+            raise CVSException(errs)
         else:
             return out, errs
 
@@ -275,7 +276,7 @@ class CVSClient(CommandLineClient):
             cwd=cwd, **options)
         out, errs = result.communicate()
         if result.returncode != 0:
-            raise CVSException(result.stderr)
+            raise CVSException(errs)
         else:
             return out, errs
 
@@ -331,7 +332,7 @@ class CVSClient(CommandLineClient):
             cwd=cwd, **options)
         out, errs = result.communicate()
         if result.returncode != 0:
-            raise CVSException(result.stderr)
+            raise CVSException(errs)
         else:
             return out, errs
 

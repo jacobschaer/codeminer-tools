@@ -1,6 +1,7 @@
 import hashlib
 from io import BytesIO
 import os
+import re
 import shutil
 import subprocess
 
@@ -64,7 +65,7 @@ class CVSRepository(Repository):
         major = int(major)
         return "{major}.{minor}".format(major, minor - 1)
 
-    def get_object(self, path, revision=None):
+    def get_file_contents(self, path, revision=None):
         repository_name = self.get_module_name()
         real_path = os.path.join(repository_name, path)
         out, stderr = self.client.checkout(
@@ -73,6 +74,12 @@ class CVSRepository(Repository):
             stdout = True
         )
         return BytesIO(out)
+
+    def get_head_version(self, path):
+        args = ['-rHEAD', path]
+        out, errs = self.client.log(files=path)
+        version = re.search(b"^head:\s+((?:\d+\.)+\d+)", out, re.MULTILINE).group(1).decode()
+        return version
 
     def get_module_name(self):
         """ It's possible that the directory containing the local copy does

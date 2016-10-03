@@ -31,6 +31,7 @@ class HgRepository(Repository):
         self.client = client
         self.cleanup = cleanup
         self.path = client.root().decode()
+        self.name = 'Hg'
 
     def __del__(self):
         if self.cleanup:
@@ -39,49 +40,49 @@ class HgRepository(Repository):
     @change_dir
     def walk_history(self):
         for record in self.client.log(follow=True):
-            rev = record.rev.decode()
+            revision = record.rev.decode()
             node = record.node.decode()
             tags = record.tags.decode()
             branch = record.branch.decode()
             author = record.author.decode()
             desc = record.desc.decode()
             date = record.date
-            changes = self.get_status(rev=rev)
-            yield ChangeSet(changes, tags, rev, author, desc, date)
+            changes = self.get_status(revision=revision)
+            yield ChangeSet(changes, tags, revision, author, desc, date)
 
     @change_dir
-    def get_changeset(self, rev=None):
-        parent_rev = None
+    def get_changeset(self, revision=None):
+        parent_revision = None
 
-        if rev is None:
-            log = self.client.log(revrange=b"tip")
+        if revision is None:
+            log = self.client.log(revisionrange=b"tip")
         else:
-            rev = str(rev)
-            log = self.client.log(revrange=rev.encode())
+            revision = str(revision)
+            log = self.client.log(revrange=revision.encode())
 
-        rev = log[0].rev.decode()
+        revision = log[0].rev.decode()
         node = log[0].node.decode()
         tags = log[0].tags.decode()
         branch = log[0].branch.decode()
         author = log[0].author.decode()
         desc = log[0].desc.decode()
         date = log[0].date
-        changes = self.get_status(rev=rev)
+        changes = self.get_status(revision=revision)
 
-        return ChangeSet(changes, tags, rev, author, desc, date)
+        return ChangeSet(changes, tags, revision, author, desc, date)
 
     @change_dir
-    def get_status(self, rev=None):
-        parent_rev = None
-        if rev is not None:
-            status = self.client.status(change=rev.encode(), copies=True)
-            parents = self.client.parents(rev=rev.encode())
+    def get_status(self, revision=None):
+        parent_revision = None
+        if revision is not None:
+            status = self.client.status(change=revision.encode(), copies=True)
+            parents = self.client.parents(rev=revision.encode())
         else:
             status = self.client.status(copies=True)
             parents = self.client.parents(rev=b"tip")
 
         if parents:
-            parent_rev = parents[0].rev.decode()
+            parent_revision = parents[0].rev.decode()
 
         changes = list()
         copies = list()
@@ -94,33 +95,33 @@ class HgRepository(Repository):
             if action == ' ':
                 _, current_path = status.pop()
                 action = ChangeType.copy
-                previous_path = path
-                previous_revision = parent_rev
-                current_revision = rev
+                previsionious_path = path
+                previsionious_revision = parent_revision
+                current_revision = revision
                 current_path = current_path.decode()
             elif action == 'M':
                 action = ChangeType.modify
                 current_path = path
-                current_revision = rev
-                previous_path = path
-                previous_revision = parent_rev
+                current_revision = revision
+                previsionious_path = path
+                previsionious_revision = parent_revision
             elif action == 'A':
                 action = ChangeType.add
                 current_path = path
-                current_revision = rev
-                previous_path = None
-                previous_revision = None                
+                current_revision = revision
+                previsionious_path = None
+                previsionious_revision = None                
             elif action == 'R':
                 action = ChangeType.remove
                 current_path = None
                 current_revision = None
-                previous_path = path
-                previous_revision = rev                   
+                previsionious_path = path
+                previsionious_revision = revision                   
 
             change = Change(
                 self,              # Repository
-                previous_path,     # Previous Path
-                previous_revision, # Previous Revision
+                previsionious_path,     # Previsionious Path
+                previsionious_revision, # Previsionious Revision
                 current_path,      # Current Path
                 current_revision,  # Current Revision
                 action             # Action
@@ -129,18 +130,18 @@ class HgRepository(Repository):
         return changes
 
     @change_dir
-    def get_object(self, path, rev=None):
-        # Note: Should ideally use the librarie's "cat" function, but it
+    def get_file_contents(self, path, revision=None):
+        # Note: Should ideally use the library's "cat" function, but it
         # has a bug in that it doesn't provide a "cwd" argument. This implementation
-        # is based on the libarie's with the fix implemented.
+        # is based on the library's with the fix implemented.
         from hglib.util import b, cmdbuilder
         if path is not None:
             path = b(str(path))
-        if rev is not None:
-            rev = b(str(rev))
+        if revision is not None:
+            revision = b(str(revision))
 
         files = [path]
 
-        args = cmdbuilder(b('cat'), r=rev, o=None, cwd=self.path, hidden=self.client.hidden, *files)
+        args = cmdbuilder(b('cat'), r=revision, o=None, cwd=self.path, hidden=self.client.hidden, *files)
         print("hg " + ' '.join([x.decode() for x in args]))
         return BytesIO(self.client.rawcommand(args))

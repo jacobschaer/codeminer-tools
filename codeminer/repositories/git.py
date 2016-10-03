@@ -7,24 +7,20 @@ from codeminer.repositories.repository import change_dir, Repository
 from codeminer.repositories.change import ChangeType, Change, ChangeSet
 
 def open_repository(path, workspace=None, **kwargs):
-    from os.path import join
-    checkout_path = tempfile.mkdtemp(dir=workspace)
-    if os.path.exists(path):
-        # Remove the checkout path so we can use copytree() which
-        # requires the path must not exist. We're only using mkdtemp()
-        # to ensure the file path is safe to use
-        os.rmdir(checkout_path)
-        print("Copying {} to {}".format(path,checkout_path))
-        shutil.copytree(path, checkout_path, symlinks=True)
-    else:
+    cleanup=False
+    if not os.path.exists(path):
+        checkout_path = tempfile.mkdtemp(dir=workspace)
         client = git.Repo.clone_from(path, checkout_path, **kwargs)
-    return GitRepository(checkout_path, cleanup=True)
+        path = checkout_path
+        cleanup=True
+    return GitRepository(path, cleanup=cleanup)
 
-class GitRepository(git.Repo, Repository):
+class GitRepository(Repository):
     def __init__(self, path, cleanup=False):
         self.cleanup = cleanup
         self.path = path
-        git.Repo.__init__(self, path)
+        self.client = git.Repo(path)
+        self.name = 'GIT'
 
     def __del__(self):
         if self.cleanup:
@@ -32,8 +28,8 @@ class GitRepository(git.Repo, Repository):
 
     @change_dir
     def walk_history(self):
-        for head in self.heads:
-            for commit in self.iter_commits(head):
+        for head in self.client.heads:
+            for commit in self.client.iter_commits(head):
                 author = commit.author
                 message = commit.message
                 date = commit.committed_date
@@ -43,9 +39,68 @@ class GitRepository(git.Repo, Repository):
                     repo.git.diff(change)
 
     @change_dir
-    def get_changes(self, rev):
-        pass
+    def get_head_revision(self):
+        return self.client.commit().binsha
 
     @change_dir
-    def get_object(self, path, rev=None):
+    def get_changeset(self, revision=None):
+        commit = self.client.commit(revision)
+        author = commit.author
+        message = commit.message
+        date = commit.committed_date
+        changes = []
+        parents = commit.parents
+        tags = []
+        identifier = commit.binsha
+
+        # If there's no parents, then this must be the first commit
+        # in the tree. In that case, all files must be "added"
+        if not parents:
+            for item in commit.tree.traverse():
+                if item.type == 'blob':
+                    changes.append(Change(self, None, None, item.path,
+                        identifier, ChangeType.add))
+
+        else:
+            # Default to using the first parent
+            for diff in commit.diff(parents[0]):
+                action = diff.change_type
+                previous_path = diff.a_path
+                current_path = diff.b_path
+                current_revision = identifier
+                if action == git.diff.DiffIndex.change_type.A:
+                    # Add
+                    action = ChangeType.add
+                    previous_revision = None
+                    previous_path = None
+                    for parent in parents:
+                        if current_path in parent:
+                            action = ChangeType.copy
+                            previous_revision = parent.binsha
+                            previous_path = current_path
+                elif action == git.diff.DiffIndex.change_type.D:
+                    # Delete
+                    action = ChangeType.remove
+                    previous_revision = parents[0].binsha
+                    previous_path = previous_path
+                    current_revision = None
+                    current_path = None
+                elif action == git.diff.DiffIndex.change_type.R:
+                    # Rename - so must have been a similar file in the tree
+                    if diff.a_blob == diff.b_blob:
+                        action = ChangeType.move
+                    else:
+                        action = ChangeType.derived
+                    previous_revision = parents[0].binsha
+                elif action == git.diff.DiffIndex.change_type.M:
+                    # Modify
+                    action = ChangeType.modify
+                    previous_revision = parents[0].binsha
+
+                changes.append(Change(self, previous_path, previous_revision, current_path,
+                     current_revision, action))
+        return ChangeSet(changes, tags=tags, identifier=identifier, author=author, message=message, timestamp=date)
+
+    @change_dir
+    def get_file_contents(self, path, revision=None):
         pass

@@ -1,22 +1,14 @@
 import mock
 import os
-import re
 import shlex
 import shutil
 import stat
-import subprocess
 import tempfile
 import time
 import unittest
 
 from codeminer.repositories import cvs, change
 from test_utils import run_shell_command
-
-def get_head_version(repository, filename):
-    args = ['-rHEAD', filename]
-    out, errs = repository.client.log(files=filename)
-    version = re.search(b"^head:\s+((?:\d+\.)+\d+)", out, re.MULTILINE).group(1).decode()
-    return version
 
 global_commit_counter = 0
 
@@ -55,7 +47,7 @@ class TestCVSReads(unittest.TestCase):
         run_shell_command('cvs add a.txt', cwd=self.repo_working_directory, env=self.env)
         run_shell_command('cvs commit -m "{commit}"'.format(commit=self.generate_logmsg()), cwd=self.repo_working_directory, env=self.env)
         sut = cvs.open_repository(self.repo_working_directory)
-        version = get_head_version(sut, 'a.txt')
+        version = sut.get_head_version('a.txt')
         changes = sut.get_changeset().changes
         self.assertEqual(changes, [change.Change(sut, None, None, "a.txt", version, change.ChangeType.add)])
 
@@ -69,7 +61,7 @@ class TestCVSReads(unittest.TestCase):
         run_shell_command('cvs remove r.txt', cwd=self.repo_working_directory, env=self.env)
         run_shell_command('cvs commit -m "{commit}"'.format(commit=self.generate_logmsg()), cwd=self.repo_working_directory, env=self.env)
         sut = cvs.open_repository(self.repo_working_directory)
-        version = get_head_version(sut, 'r.txt')
+        version = sut.get_head_version('r.txt')
         major, minor = version.split('.')
         previous_version = "{major}.{minor}".format(major=major, minor=(int(minor) - 1))
         changes = sut.get_changeset().changes
@@ -86,7 +78,7 @@ class TestCVSReads(unittest.TestCase):
             test_file.write('\nb\n')
         run_shell_command('cvs commit -m "{commit}"'.format(commit=self.generate_logmsg()), cwd=self.repo_working_directory, env=self.env)
         sut = cvs.open_repository(self.repo_working_directory)
-        version = get_head_version(sut, 'm.txt')
+        version = sut.get_head_version('m.txt')
         major, minor = version.split('.')
         previous_version = "{major}.{minor}".format(major=major, minor=(int(minor) - 1))
         changes = sut.get_changeset().changes
@@ -103,7 +95,7 @@ class TestCVSReads(unittest.TestCase):
         run_shell_command('cvs add b.txt', cwd=self.repo_working_directory, env=self.env)
         run_shell_command('cvs commit -m "{commit}"'.format(commit=self.generate_logmsg()), cwd=self.repo_working_directory, env=self.env)
         sut = cvs.open_repository(self.repo_working_directory)
-        file_obj = sut.get_object("b.txt")
+        file_obj = sut.get_file_contents("b.txt")
         self.assertEqual(file_obj.read(), b"asdf")
 
 if __name__ == '__main__':

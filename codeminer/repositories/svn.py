@@ -1,4 +1,5 @@
 import datetime
+from io import BytesIO
 import os
 import shlex
 import shutil
@@ -10,7 +11,7 @@ import xmltodict
 
 from codeminer.repositories.repository import Repository
 from codeminer.repositories.change import ChangeType, Change, ChangeSet
-from codeminer.clients.commandline import CommandLineClient
+from codeminer.clients.svn import SVNClient
 
 def open_repository(path, workspace=None, **kwargs):
     if os.path.exists(path):
@@ -21,11 +22,11 @@ def open_repository(path, workspace=None, **kwargs):
         if '@' in basename:
             basename, revision = basename.split('@')
         checkout_path = tempfile.mkdtemp(dir=workspace)
-        client = CommandLineClient('svn')
+        client = SVNClient()
         if revision is not None:
-            client.run_subcommand('checkout', path, cwd=checkout_path)
+            client.checkout(path, quiet=True, cwd=checkout_path)
         else:
-            client.run_subcommand('checkout', path, cwd=checkout_path)
+            client.checkout(path, quiet=True, cwd=checkout_path)
 
         working_copy_path = os.path.join(checkout_path, os.path.basename(path))
         return SVNRepository(working_copy_path, cleanup=True)
@@ -33,44 +34,27 @@ def open_repository(path, workspace=None, **kwargs):
 class SVNRepository(Repository):
     def __init__(self, path, cleanup=False):
         self.path = path
-        self.client = CommandLineClient('svn')
+        self.client = SVNClient(cwd=self.path)
         self.cleanup = cleanup
+        self.name = 'SVN'
 
     def __del__(self):
         if self.cleanup:
             shutil.rmtree(self.path)
 
-    def info(self, target=None, rev=None):
-        args = []
-        kwargs = {}
-        flags = ['xml']
-        if target and revision:
-            args.append('{target}@{revision}'.format(
-                target = target, revision = rev))
-        elif target:
-            args.append(target)
-        elif rev:
-            kwargs['r'] = rev
+    def info(self, path=None, revision=None):
+        if (path is not None) and (revision is not None):
+            path = '{path}@{revision}'.format(
+                path = path, revision = revision)
 
-        result = self.client.run_subcommand('info', *args, flags=flags,
-                                              cwd=self.path, **kwargs)
-        return xmltodict.parse(result.stdout)['info']['entry']
+        out, err = self.client.info(xml=True, target=path, revision=revision)
+        return xmltodict.parse(out)['info']['entry']
 
     def walk_history(self):
         pass
 
-    def get_changeset(self, rev=None):
-        rev = int(rev)
-        args = []
-        if rev is not None:
-            kwargs = {'r' : str(rev)}
-        else:
-            kwargs = {}
-        flags = ['xml', 'v']
-
-        result = self.client.run_subcommand('log', *args, flags=flags,
-                                              cwd=self.path, **kwargs)
-        out, err = result.stdout, result.stderr
+    def get_changeset(self, revision=None):
+        out, err = self.client.log(xml=True, revision=revision, verbose=True)
         print(out, err)
         revision, author, timestamp, message, changes = self._read_log_xml(out)
         return ChangeSet(changes, None, revision, author, message, timestamp)
@@ -123,13 +107,8 @@ class SVNRepository(Repository):
         return revision, author, date, message, changes
 
 
-    def get_object(self, path, rev=None):
-        if rev:
-            args = ['{path}@{rev}'.format(path=path, rev=rev)]
-        else:
-            args = [path]
-        kwargs = {}
-        flags = []
-        result = self.client.run_subcommand('cat', *args, flags=flags,
-                                              cwd=self.path, **kwargs)
-        return result.stdout
+    def get_file_contents(self, path, revision=None):
+        if revision:
+            path = '{path}@{revision}'.format(path=path, revision=revision)
+        out, err = self.client.cat(path, ignore_keywords=True)
+        return BytesIO(out)

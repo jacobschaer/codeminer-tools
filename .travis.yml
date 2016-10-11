@@ -5,7 +5,7 @@ before_install:
   - sudo apt-get -qq update
   - sudo apt-get install -y cvs
   - sudo apt-get install -y mercurial
-  - sudo apt-get install -y svn
+  - sudo apt-get install -y subversion
   - sudo apt-get install -y git
 # command to install dependencies
 install:

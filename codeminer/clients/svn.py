@@ -26,7 +26,7 @@ class SVNClient(CommandLineClient):
             arguments += target
         if revision is not None:
             options['r'] = revision
-        if ignore_keywords is not None:
+        if ignore_keywords:
             flags.append('ignore-keywords')
         if cwd is None:
             cwd = self.cwd

@@ -1,0 +1,15 @@
+language: python
+python: "3.5"
+# command to install OS dependencies
+before_install:
+  - sudo apt-get -qq update
+  - sudo apt-get install -y cvs
+  - sudo apt-get install -y mercurial
+  - sudo apt-get install -y svn
+  - sudo apt-get install -y git
+# command to install dependencies
+install:
+  - "pip install -r requirements.txt"
+  - python setup.py -q install
+# command to run tests
+script: nosetests -w codeminer --with-coverage --cover-package=codeminer $*

@@ -153,9 +153,6 @@ class CVSClient(CommandLineClient):
         flags = []
         arguments = []
 
-        if path is not None:
-            arguments.append(path)
-
         if reset:
             flags.append('A')
         if no_shorten:
@@ -184,9 +181,13 @@ class CVSClient(CommandLineClient):
         if dir is not None:
             options['d'] = dir
         if kopt is not None:
-            options['k'] = kopt
+            # kopts are special with no spaces
+            arguments.append('-k' + kopt)
         if merge is not None:
             options['j'] = merge
+
+        if path is not None:
+            arguments.append(path)
 
         if cwd is None:
             cwd = self.cwd

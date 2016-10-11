@@ -51,24 +51,30 @@ class SVNRepository(Repository):
         return xmltodict.parse(out)['info']['entry']
 
     def walk_history(self):
-        pass
+        out, err = self.client.log(xml=True, verbose=True)
+        print(out, err)
+        for revision, author, timestamp, message, changes in self._read_log_xml(out):
+            yield ChangeSet(changes, None, revision, author, message, timestamp)
 
     def get_changeset(self, revision=None):
-        out, err = self.client.log(xml=True, revision=revision, verbose=True)
+        out, err = self.client.log(xml=True, revision=revision, verbose=True, limit=1)
         print(out, err)
-        revision, author, timestamp, message, changes = self._read_log_xml(out)
+        revision, author, timestamp, message, changes = self._read_log_xml(out).__next__()
         return ChangeSet(changes, None, revision, author, message, timestamp)
 
     def _read_log_xml(self, log):
         tree = ET.fromstring(log)
+        for logentry in tree.findall('logentry'):
+            yield self._read_logentry_xml(logentry)
 
-        author = tree.find('logentry/author').text
-        date = tree.find('logentry/date').text
-        message = tree.find('logentry/msg').text
-        revision = int(tree.find('logentry').get('revision'))
+    def _read_logentry_xml(self, logentry):
+        author = logentry.find('author').text
+        date = logentry.find('date').text
+        message = logentry.find('msg').text
+        revision = int(logentry.get('revision'))
 
         changes = list()
-        for path in tree.find('logentry/paths'):
+        for path in logentry.find('paths'):
             action_string = path.get('action')
             copyfrom_path = path.get('copyfrom-path', None)
             # Copies are marked as 'A' by SVN but have metadata

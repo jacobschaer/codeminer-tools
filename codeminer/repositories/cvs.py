@@ -71,7 +71,8 @@ class CVSRepository(Repository):
         out, stderr = self.client.checkout(
             path = real_path, 
             revision = revision,
-            stdout = True
+            stdout = True,
+            kopt='k' # No keyword substitution
         )
         return BytesIO(out)
 

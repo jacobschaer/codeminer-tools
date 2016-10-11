@@ -43,7 +43,7 @@ class SVNClient(CommandLineClient):
             return out, errs
 
     def log(self, path=None, revision=None, change=None, quiet=False, verbose=False, use_merge_history=False,
-            targets=None, stop_on_copy=False, incremental=False, xml=False, limit=False, all_props=False,
+            targets=None, stop_on_copy=False, incremental=False, xml=False, limit=None, all_props=False,
             no_revprops=False, revprop=None, depth=None, diff=False, diff_cmd = None, internal_diff=False,
             extension=None, search=None, search_and=None, cwd=None, *args, **kwargs):
         """  -r [--revision] ARG      : ARG (some commands also take ARG1:ARG2 range)
@@ -113,8 +113,8 @@ class SVNClient(CommandLineClient):
             flags.append('incremental')
         if xml:
             flags.append('xml') 
-        if limit:
-            options['limit'] = limit
+        if limit is not None:
+            options['limit'] = str(limit)
         if all_props:
             flags.append('with-all-revprops')
         if no_revprops:

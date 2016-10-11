@@ -30,21 +30,19 @@ class GitRepository(Repository):
     def walk_history(self):
         for head in self.client.heads:
             for commit in self.client.iter_commits(head):
-                author = commit.author
-                message = commit.message
-                date = commit.committed_date
-                sha = commit.binsha
-                changes = diff.stats
-                for change in changs:
-                    repo.git.diff(change)
+                yield self.process_commit(commit)
 
     @change_dir
     def get_head_revision(self):
         return self.client.commit().binsha
 
     @change_dir
-    def get_changeset(self, revision=None):
+    def get_changeset(self, revision='HEAD'):
         commit = self.client.commit(revision)
+        return self.process_commit(commit)
+
+    @change_dir
+    def process_commit(self, commit):
         author = commit.author
         message = commit.message
         date = commit.committed_date
@@ -63,39 +61,49 @@ class GitRepository(Repository):
 
         else:
             # Default to using the first parent
-            for diff in commit.diff(parents[0]):
+            for diff in parents[0].diff(commit):
                 action = diff.change_type
                 previous_path = diff.a_path
                 current_path = diff.b_path
                 current_revision = identifier
-                if action == git.diff.DiffIndex.change_type.A:
+                if action == 'A':
                     # Add
                     action = ChangeType.add
                     previous_revision = None
                     previous_path = None
                     for parent in parents:
-                        if current_path in parent:
-                            action = ChangeType.copy
-                            previous_revision = parent.binsha
-                            previous_path = current_path
-                elif action == git.diff.DiffIndex.change_type.D:
+                        for previous_blob in parent.tree.traverse():
+                            if ((previous_blob.type == 'blob') and
+                                (previous_blob.binsha == diff.b_blob.binsha)):
+                                    action = ChangeType.copy
+                                    previous_revision = parent.binsha
+                                    previous_path = previous_blob.path
+                                    break
+                        # We're lazy... first match is good enough, break out.. useful
+                        # if there's multiple parents - we only search as many as necessary
+                        if previous_path is not None:
+                            break
+                elif action == 'D':
                     # Delete
                     action = ChangeType.remove
                     previous_revision = parents[0].binsha
                     previous_path = previous_path
                     current_revision = None
                     current_path = None
-                elif action == git.diff.DiffIndex.change_type.R:
+                elif action[0] == 'R':
                     # Rename - so must have been a similar file in the tree
-                    if diff.a_blob == diff.b_blob:
+                    # Typically these are in the form 'R100' which means 100% match
+                    if ((action[1:] == '100') or (diff.a_blob == diff.b_blob)):
                         action = ChangeType.move
                     else:
                         action = ChangeType.derived
                     previous_revision = parents[0].binsha
-                elif action == git.diff.DiffIndex.change_type.M:
+                elif action == 'M':
                     # Modify
                     action = ChangeType.modify
                     previous_revision = parents[0].binsha
+                else:
+                    raise Exception("Unknown Git Action Type: %s" % action)
 
                 changes.append(Change(self, previous_path, previous_revision, current_path,
                      current_revision, action))
@@ -103,4 +111,7 @@ class GitRepository(Repository):
 
     @change_dir
     def get_file_contents(self, path, revision=None):
-        pass
+        commit = self.client.commit(revision)
+        for blob in commit.tree.traverse(predicate=lambda obj, depth: obj.path == path):
+            return blob.data_stream
+        return None

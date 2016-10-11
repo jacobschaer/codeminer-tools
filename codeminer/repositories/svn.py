@@ -116,5 +116,5 @@ class SVNRepository(Repository):
     def get_file_contents(self, path, revision=None):
         if revision:
             path = '{path}@{revision}'.format(path=path, revision=revision)
-        out, err = self.client.cat(path, ignore_keywords=True)
+        out, err = self.client.cat(path) #, ignore_keywords=True only works SVN 1.7+
         return BytesIO(out)

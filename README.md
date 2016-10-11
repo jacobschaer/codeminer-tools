@@ -1,6 +1,9 @@
 # codeminer
 Tool for analyzing code lineage
 
+## Build Information
+[![Build Status](https://travis-ci.org/jacobschaer/codeminer.svg?branch=master)](https://travis-ci.org/jacobschaer/codeminer)
+
 ## Motivation
 At a previous job, an audit of intellectual property rights for software sparked an effort to determine the legacy of each file in our repositories. Unfortunately, the codebase has had many homes over the years including:
 

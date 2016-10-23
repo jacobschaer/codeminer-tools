@@ -2,6 +2,7 @@ from enum import Enum
 
 from codeminer.repositories.file import RepositoryFile
 
+
 class ChangeType(Enum):
     add = 0       # File added with unknown origin
     remove = 1    # File removed from repository
@@ -10,7 +11,9 @@ class ChangeType(Enum):
     copy = 4      # File copied from existing path.
     derived = 5   # File copied or moved from existing path and modified before commit
 
+
 class ChangeSet:
+
     def __init__(self, changes, tags, identifier, author, message, timestamp):
         self.changes = changes
         self.identifier = identifier
@@ -48,19 +51,28 @@ class ChangeSet:
         # Go through and look for 'Derived' which are copy/move + modify
         for change in combined_changes:
             if ((change.action == ChangeType.move) or
-                (change.action == ChangeType.copy)):
+                    (change.action == ChangeType.copy)):
                 if (change.previous_file.read() != change.current_file.read()):
                     change.action = ChangeType.derived
-        
+
         self.changes = combined_changes
 
 
 class Change:
     """ Represents a change between to revisions of an object in a repository"""
-    def __init__(self, repository, previous_path, previous_revision, current_path,
-                 current_revision, action):
-        self.previous_file = RepositoryFile(repository, previous_path, previous_revision)
-        self.current_file = RepositoryFile(repository, current_path, current_revision)
+
+    def __init__(
+            self,
+            repository,
+            previous_path,
+            previous_revision,
+            current_path,
+            current_revision,
+            action):
+        self.previous_file = RepositoryFile(
+            repository, previous_path, previous_revision)
+        self.current_file = RepositoryFile(
+            repository, current_path, current_revision)
         self.action = action
 
     def __eq__(self, other):
@@ -74,21 +86,20 @@ class Change:
             self.previous_file.revision, self.action, self.current_file.repository.name,
             self.current_file.path, self.current_file.revision)
 
-
     def __str__(self):
         if (self.action == ChangeType.add):
             return "Added {name} (Current Rev: {revision})".format(
-                name = self.current_file.path,
-                revision = self.current_file.revision
-                )
+                name=self.current_file.path,
+                revision=self.current_file.revision
+            )
         elif (self.action == ChangeType.remove):
-             return "Removed {name} (Last Rev: {revision})".format(
-                name = self.previous_file.path,
-                revision = self.previous_file.revision
-                )
+            return "Removed {name} (Last Rev: {revision})".format(
+                name=self.previous_file.path,
+                revision=self.previous_file.revision
+            )
         elif (self.action == ChangeType.modify):
-             return "Modified {name} ({previous} ==> {current})".format(
-                name = self.current_file.path,
-                previous = self.previous_file.revision,
-                current = self.current_file.revision
-                )
+            return "Modified {name} ({previous} ==> {current})".format(
+                name=self.current_file.path,
+                previous=self.previous_file.revision,
+                current=self.current_file.revision
+            )

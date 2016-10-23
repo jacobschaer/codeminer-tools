@@ -4,10 +4,13 @@ from typing import Dict, List, Optional, Union, Tuple
 
 from codeminer.clients.commandline import CommandLineClient
 
+
 class CVSException(Exception):
     pass
 
+
 class CVSClient(CommandLineClient):
+
     def __init__(self, cvs_root=None, binary='cvs', cwd=None):
         env = CVSClient.get_env_vars()
         if cvs_root is not None:
@@ -18,7 +21,7 @@ class CVSClient(CommandLineClient):
 
     @classmethod
     def get_env_vars(self):
-        #ftp://ftp.gnu.org/old-gnu/Manuals/cvs/html_node/cvs_144.html
+        # ftp://ftp.gnu.org/old-gnu/Manuals/cvs/html_node/cvs_144.html
         valid_variables = [
             "CVSIGNORE", "CVSWRAPPERS", "CVSREAD", "CVSROOT", "EDITOR",
             "CVSEDITOR", "PATH", "RCSBIN", "HOME", "HOMEPATH", "CVS_RSH",
@@ -27,10 +30,17 @@ class CVSClient(CommandLineClient):
             "CVS_IGNORE_REMOTE_ROOT", "COMSPEC", "TMPDIR", "TMP", "TEMP",
             "LOGNAME", "USER", "RCSINIT"]
         env = os.environ
-        return {key : val for key, val in env.items() if key in valid_variables}
+        return {key: val for key, val in env.items() if key in valid_variables}
 
-    def add(self, files : Union[List[str], str], message : str = None,
-        rcs_kflag : str = None, cwd=None, *args : str, **kwargs : str) -> Tuple[str,str]:
+    def add(self,
+            files: Union[List[str],
+                         str],
+            message: str = None,
+            rcs_kflag: str = None,
+            cwd=None,
+            *args: str,
+            **kwargs: str) -> Tuple[str,
+                                    str]:
         """Add a new file/directory to the repository
 
         Parameters
@@ -62,7 +72,7 @@ class CVSClient(CommandLineClient):
         flags = []
         arguments = []
 
-        if type(files) == str:
+        if isinstance(files, str):
             arguments.append(files)
         else:
             arguments += files
@@ -83,7 +93,7 @@ class CVSClient(CommandLineClient):
             options[kwarg] = kwargs[kwarg]
 
         result = self.run_subcommand('add', *arguments, flags=flags,
-            cwd=cwd, **options)
+                                     cwd=cwd, **options)
 
         out, errs = result.communicate()
         if result.returncode != 0:
@@ -91,13 +101,27 @@ class CVSClient(CommandLineClient):
         else:
             return out, errs
 
-    def checkout(self, path : str = None,
-        reset : bool = False, no_shorten : bool = False, prune : bool = False,
-        recursive : bool = False, cat : bool = False, force : bool = False,
-        local_directory : bool = False, no_module : bool = False,
-        stdout : bool = False, status : bool = False, revision : str = None,
-        date : str = None, dir : str = None, kopt : str = None,
-        merge : bool = None, cwd=None, *args : str, **kwargs : str) -> Tuple[str,str]:
+    def checkout(self,
+                 path: str = None,
+                 reset: bool = False,
+                 no_shorten: bool = False,
+                 prune: bool = False,
+                 recursive: bool = False,
+                 cat: bool = False,
+                 force: bool = False,
+                 local_directory: bool = False,
+                 no_module: bool = False,
+                 stdout: bool = False,
+                 status: bool = False,
+                 revision: str = None,
+                 date: str = None,
+                 dir: str = None,
+                 kopt: str = None,
+                 merge: bool = None,
+                 cwd=None,
+                 *args: str,
+                 **kwargs: str) -> Tuple[str,
+                                         str]:
         """Checkout sources for editing
 
         Parameters
@@ -199,7 +223,7 @@ class CVSClient(CommandLineClient):
             options[kwarg] = kwargs[kwarg]
 
         result = self.run_subcommand('checkout', *arguments, flags=flags,
-            cwd=cwd, **options)
+                                     cwd=cwd, **options)
 
         out, errs = result.communicate()
         if result.returncode != 0:
@@ -207,10 +231,10 @@ class CVSClient(CommandLineClient):
         else:
             return out, errs
 
-    def commit(self, message : str, files : Union[List[str], str] = [],
-        recursive : bool = False, local_directory : bool = False,
-        force : bool = False, revision : str = None, cwd=None, 
-        *args : str, **kwargs : str) -> Tuple[str,str]:
+    def commit(self, message: str, files: Union[List[str], str]=[],
+               recursive: bool = False, local_directory: bool = False,
+               force: bool = False, revision: str = None, cwd=None,
+               *args: str, **kwargs: str) -> Tuple[str, str]:
         """Check files into the repository
 
         Parameters
@@ -248,7 +272,7 @@ class CVSClient(CommandLineClient):
         flags = []
         arguments = []
 
-        if type(files) == str:
+        if isinstance(files, str):
             arguments.append(files)
         else:
             arguments += files
@@ -258,7 +282,7 @@ class CVSClient(CommandLineClient):
         if recursive:
             flags.append('R')
         if local_directory:
-            flags.append('l') 
+            flags.append('l')
         if force:
             flags.append('f')
         if revision is not None:
@@ -274,16 +298,16 @@ class CVSClient(CommandLineClient):
             options[kwarg] = kwargs[kwarg]
 
         result = self.run_subcommand('commit', *arguments, flags=flags,
-            cwd=cwd, **options)
+                                     cwd=cwd, **options)
         out, errs = result.communicate()
         if result.returncode != 0:
             raise CVSException(errs)
         else:
             return out, errs
 
-    def remove(self, files : Union[List[str], str] = [],
-        delete : bool = False, local_directory : bool = False,
-        recursive : bool = False, cwd=None, *args : str, **kwargs : str):
+    def remove(self, files: Union[List[str], str]=[],
+               delete: bool = False, local_directory: bool = False,
+               recursive: bool = False, cwd=None, *args: str, **kwargs: str):
         """Remove an entry from the repository
 
         Parameters
@@ -308,7 +332,7 @@ class CVSClient(CommandLineClient):
         flags = []
         arguments = []
 
-        if type(files) == str:
+        if isinstance(files, str):
             arguments.append(files)
         else:
             arguments += files
@@ -316,7 +340,7 @@ class CVSClient(CommandLineClient):
         if delete:
             flags.append('f')
         if local_directory:
-            flags.append('l') 
+            flags.append('l')
         if recursive:
             flags.append('R')
 
@@ -330,20 +354,42 @@ class CVSClient(CommandLineClient):
             options[kwarg] = kwargs[kwarg]
 
         result = self.run_subcommand('remove', *arguments, flags=flags,
-            cwd=cwd, **options)
+                                     cwd=cwd, **options)
         out, errs = result.communicate()
         if result.returncode != 0:
             raise CVSException(errs)
         else:
             return out, errs
 
-    def log(self, local : bool = False, list_revisions : bool = False,
-        header_only : bool = False, name_only : bool = False, descriptive_only: bool = False,
-        no_tags : bool = False, tags : bool = False, 
-        no_header_if_revision: bool = False, revisions : Union[List[str], str] = None,
-        dates : Union[List[str], str] = None, states : Union[List[str], str] = None,
-        logins : Union[List[str], str] = None, files : Union[List[str], str] = [],
-        xml : bool = False, cwd=None, *args, **kwargs):
+    def log(
+            self,
+            local: bool = False,
+            list_revisions: bool = False,
+            header_only: bool = False,
+            name_only: bool = False,
+            descriptive_only: bool = False,
+            no_tags: bool = False,
+            tags: bool = False,
+            no_header_if_revision: bool = False,
+            revisions: Union[
+                List[str],
+                str]=None,
+            dates: Union[
+                List[str],
+                str]=None,
+        states: Union[
+                List[str],
+                str]=None,
+            logins: Union[
+                List[str],
+                str]=None,
+            files: Union[
+                List[str],
+                str]=[],
+            xml: bool = False,
+            cwd=None,
+            *args,
+            **kwargs):
         """Print out history information for files
 
         Parameters
@@ -375,7 +421,7 @@ class CVSClient(CommandLineClient):
         logins : str , optional
             Only list revisions checked in by specified logins.
         files : str or list of str, optional
-            Files to log        
+            Files to log
         xml : bool, optional
             Return XML representation of the log. This
             is not a native operation and relies on
@@ -420,26 +466,27 @@ class CVSClient(CommandLineClient):
             # The 'r' option is strange because there's no space. Treat
             # as an argument.. this just means it will go last in the options
             # list.
-            if type(revisions) == str:
+            if isinstance(revisions, str):
                 arguments.append('-r{revisions}'.format(revisions=revisions))
             else:
-                arguments.append('-r{revisions}'.format(revisions=','.join(revisions)))
+                arguments.append(
+                    '-r{revisions}'.format(revisions=','.join(revisions)))
         if dates is not None:
-            if type(dates) == str:
+            if isinstance(dates, str):
                 options['d'] = dates
             else:
                 options['d'] = ';'.join(dates)
         if states is not None:
-            if type(states) == str:
+            if isinstance(states, str):
                 options['s'] = states
             else:
                 options['s'] = ','.join(states)
         if logins is not None:
             # The 'w' option is also strange with no space. Again, treate
             # as an argument
-            arguments.append('-w{logins}'.format(logins=logins)) 
+            arguments.append('-w{logins}'.format(logins=logins))
 
-        if type(files) == str:
+        if isinstance(files, str):
             arguments.append(files)
         else:
             arguments += files
@@ -454,17 +501,28 @@ class CVSClient(CommandLineClient):
             options[kwarg] = kwargs[kwarg]
 
         log_process = self.run_subcommand('log', *arguments, flags=flags,
-            cwd=self.cwd, **options)
+                                          cwd=self.cwd, **options)
 
         if xml:
             cvs2cl = os.path.join(os.path.abspath(
-            os.path.dirname(__file__)), '..', 'tools', 'cvs2cl.pl')
-            xml_process = subprocess.Popen(['perl', cvs2cl, '--stdin', '--stdout', 
-            '--xml', '--noxmlns', '--lines-modified', '--tags', '--follow'],
-            stdout=subprocess.PIPE, stderr=subprocess.PIPE, stdin=log_process.stdout,
-            cwd=cwd, env=self.env)
+                os.path.dirname(__file__)), '..', 'tools', 'cvs2cl.pl')
+            xml_process = subprocess.Popen(['perl',
+                                            cvs2cl,
+                                            '--stdin',
+                                            '--stdout',
+                                            '--xml',
+                                            '--noxmlns',
+                                            '--lines-modified',
+                                            '--tags',
+                                            '--follow'],
+                                           stdout=subprocess.PIPE,
+                                           stderr=subprocess.PIPE,
+                                           stdin=log_process.stdout,
+                                           cwd=cwd,
+                                           env=self.env)
 
-            # Close stdout handle for log_process since it will be used by cvs2cl
+            # Close stdout handle for log_process since it will be used by
+            # cvs2cl
             log_process.stdout.close()
             # Get stderr/stdout from cvs2cl
             out, errs = xml_process.communicate()

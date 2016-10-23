@@ -1,4 +1,6 @@
-import os, tempfile, shutil
+import os
+import tempfile
+import shutil
 from io import BytesIO
 
 import hglib
@@ -6,6 +8,7 @@ from hglib.util import b
 
 from codeminer.repositories.repository import Repository
 from codeminer.repositories.change import ChangeType, Change, ChangeSet
+
 
 def change_dir(function):
     def wrap_inner(*args, **kwargs):
@@ -17,8 +20,10 @@ def change_dir(function):
         return result
     return wrap_inner
 
+
 def create_repository(path=None, **kwargs):
     return HgRepository(hglib.init(dest=path, **kwargs), cleanup=False)
+
 
 def open_repository(path, workspace=None, **kwargs):
     checkout_path = tempfile.mkdtemp(dir=workspace)
@@ -26,7 +31,9 @@ def open_repository(path, workspace=None, **kwargs):
     client.open()
     return HgRepository(client, cleanup=True)
 
+
 class HgRepository(Repository):
+
     def __init__(self, client, cleanup=False):
         self.client = client
         self.cleanup = cleanup
@@ -110,18 +117,18 @@ class HgRepository(Repository):
                 current_path = path
                 current_revision = revision
                 previsionious_path = None
-                previsionious_revision = None                
+                previsionious_revision = None
             elif action == 'R':
                 action = ChangeType.remove
                 current_path = None
                 current_revision = None
                 previsionious_path = path
-                previsionious_revision = revision                   
+                previsionious_revision = revision
 
             change = Change(
                 self,              # Repository
                 previsionious_path,     # Previsionious Path
-                previsionious_revision, # Previsionious Revision
+                previsionious_revision,  # Previsionious Revision
                 current_path,      # Current Path
                 current_revision,  # Current Revision
                 action             # Action
@@ -142,6 +149,12 @@ class HgRepository(Repository):
 
         files = [path]
 
-        args = cmdbuilder(b('cat'), r=revision, o=None, cwd=self.path, hidden=self.client.hidden, *files)
+        args = cmdbuilder(
+            b('cat'),
+            r=revision,
+            o=None,
+            cwd=self.path,
+            hidden=self.client.hidden,
+            *files)
         print("hg " + ' '.join([x.decode() for x in args]))
         return BytesIO(self.client.rawcommand(args))

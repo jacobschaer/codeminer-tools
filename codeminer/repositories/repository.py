@@ -1,5 +1,6 @@
 import os
 
+
 def change_dir(function):
     def wrap_inner(*args, **kwargs):
         self = args[0]
@@ -9,6 +10,7 @@ def change_dir(function):
         os.chdir(old_path)
         return result
     return wrap_inner
+
 
 class Repository:
     pass

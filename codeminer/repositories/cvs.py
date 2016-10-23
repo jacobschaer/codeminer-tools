@@ -12,6 +12,7 @@ from codeminer.clients.cvs import CVSClient
 from codeminer.repositories.change import ChangeType, Change, ChangeSet
 from codeminer.repositories.repository import Repository
 
+
 def open_repository(path, cvs_root=None, workspace=None, **kwargs):
     if os.path.exists(path):
         return CVSRepository(path, cvs_root=cvs_root)
@@ -21,9 +22,14 @@ def open_repository(path, cvs_root=None, workspace=None, **kwargs):
         client = CVSClient()
         client.checkout(path=path, cwd=checkout_path)
         working_copy_path = os.path.join(checkout_path, os.path.basename(path))
-        return CVSRepository(working_copy_path, cvs_root=cvs_root, cleanup=True)
+        return CVSRepository(
+            working_copy_path,
+            cvs_root=cvs_root,
+            cleanup=True)
+
 
 class CVSRepository(Repository):
+
     def __init__(self, path, cvs_root=None, cleanup=False):
         self.client = CVSClient(cvs_root=cvs_root, cwd=path)
         self.path = path
@@ -40,8 +46,17 @@ class CVSRepository(Repository):
         tags = None
         author, timestamp, message, changes = self._read_log_xml(out, limit=1)
         # There's no global revision ID in CVS, so make a commit ID
-        revision_id = hashlib.md5(author.encode() + timestamp.encode() + message.encode()).hexdigest()
-        return ChangeSet(changes, tags, revision_id, author, message, timestamp)
+        revision_id = hashlib.md5(
+            author.encode() +
+            timestamp.encode() +
+            message.encode()).hexdigest()
+        return ChangeSet(
+            changes,
+            tags,
+            revision_id,
+            author,
+            message,
+            timestamp)
 
     def get_previous_version(self, version):
         # See: http://www.astro.princeton.edu/~rhl/cvs-branches.html
@@ -69,17 +84,20 @@ class CVSRepository(Repository):
         repository_name = self.get_module_name()
         real_path = os.path.join(repository_name, path)
         out, stderr = self.client.checkout(
-            path = real_path, 
-            revision = revision,
-            stdout = True,
-            kopt='k' # No keyword substitution
+            path=real_path,
+            revision=revision,
+            stdout=True,
+            kopt='k'  # No keyword substitution
         )
         return BytesIO(out)
 
     def get_head_version(self, path):
         args = ['-rHEAD', path]
         out, errs = self.client.log(files=path)
-        version = re.search(b"^head:\s+((?:\d+\.)+\d+)", out, re.MULTILINE).group(1).decode()
+        version = re.search(
+            b"^head:\s+((?:\d+\.)+\d+)",
+            out,
+            re.MULTILINE).group(1).decode()
         return version
 
     def get_module_name(self):
@@ -133,6 +151,6 @@ class CVSRepository(Repository):
                 previous_revision = self.get_previous_version(revision)
 
             changes.append(Change(self, previous_path, previous_revision,
-               current_path, current_revision, action))
+                                  current_path, current_revision, action))
 
         return author, date, message, changes

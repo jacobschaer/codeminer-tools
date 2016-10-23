@@ -4,23 +4,33 @@ from typing import Dict, List, Optional, Union, Tuple
 
 from codeminer.clients.commandline import CommandLineClient
 
+
 class SVNException(Exception):
     pass
 
+
 class SVNClient(CommandLineClient):
+
     def __init__(self, binary='svn', cwd=None):
         self.cwd = cwd
         self.name = 'SVN'
         env = os.environ.copy()
         super().__init__(binary, env=env)
 
-    def cat(self, target, revision=None, ignore_keywords=False, cwd=None, *args, **kwargs):
+    def cat(
+            self,
+            target,
+            revision=None,
+            ignore_keywords=False,
+            cwd=None,
+            *args,
+            **kwargs):
         """Output the content of specified files or URLs."""
         options = {}
         flags = []
         arguments = []
 
-        if type(target) == str:
+        if isinstance(target, str):
             arguments.append(target)
         else:
             arguments += target
@@ -35,17 +45,39 @@ class SVNClient(CommandLineClient):
         for kwarg in kwargs:
             options[kwarg] = kwargs[kwarg]
         result = self.run_subcommand('cat', *arguments, flags=flags,
-            cwd=cwd, **options)
+                                     cwd=cwd, **options)
         out, errs = result.communicate()
         if result.returncode != 0:
             raise SVNException(errs)
         else:
             return out, errs
 
-    def log(self, path=None, revision=None, change=None, quiet=False, verbose=False, use_merge_history=False,
-            targets=None, stop_on_copy=False, incremental=False, xml=False, limit=None, all_props=False,
-            no_revprops=False, revprop=None, depth=None, diff=False, diff_cmd = None, internal_diff=False,
-            extension=None, search=None, search_and=None, cwd=None, *args, **kwargs):
+    def log(
+            self,
+            path=None,
+            revision=None,
+            change=None,
+            quiet=False,
+            verbose=False,
+            use_merge_history=False,
+            targets=None,
+            stop_on_copy=False,
+            incremental=False,
+            xml=False,
+            limit=None,
+            all_props=False,
+            no_revprops=False,
+            revprop=None,
+            depth=None,
+            diff=False,
+            diff_cmd=None,
+            internal_diff=False,
+            extension=None,
+            search=None,
+            search_and=None,
+            cwd=None,
+            *args,
+            **kwargs):
         """  -r [--revision] ARG      : ARG (some commands also take ARG1:ARG2 range)
                                          A revision argument can be one of:
                                             NUMBER       revision number
@@ -91,7 +123,7 @@ class SVNClient(CommandLineClient):
         arguments = []
 
         if path is not None:
-            if type(target) == str:
+            if isinstance(target, str):
                 arguments.append(target)
             else:
                 arguments += target
@@ -112,13 +144,13 @@ class SVNClient(CommandLineClient):
         if incremental:
             flags.append('incremental')
         if xml:
-            flags.append('xml') 
+            flags.append('xml')
         if limit is not None:
             options['limit'] = str(limit)
         if all_props:
             flags.append('with-all-revprops')
         if no_revprops:
-            flags.append('with-no-revprops') 
+            flags.append('with-no-revprops')
         if revprop is not None:
             options['with-revprop'] = revprop
         if depth is not None:
@@ -142,7 +174,7 @@ class SVNClient(CommandLineClient):
         for kwarg in kwargs:
             options[kwarg] = kwargs[kwarg]
         result = self.run_subcommand('log', *arguments, flags=flags,
-            cwd=cwd, **options)
+                                     cwd=cwd, **options)
         out, errs = result.communicate()
         if result.returncode != 0:
             raise SVNException(errs)
@@ -150,16 +182,16 @@ class SVNClient(CommandLineClient):
             return out, errs
 
     def info(self, target=None, revision=None, recursive=False,
-        depth=None, targets=None, incremental=False, xml=False,
-        changelist=None, include_externals=False, show_item=None,
-        no_newline=False, cwd=None, *args, **kwargs):
+             depth=None, targets=None, incremental=False, xml=False,
+             changelist=None, include_externals=False, show_item=None,
+             no_newline=False, cwd=None, *args, **kwargs):
         """Display information about a local or remote item."""
         options = {}
         flags = []
         arguments = []
 
         if target is not None:
-            if type(target) == str:
+            if isinstance(target, str):
                 arguments.append(target)
             else:
                 arguments += target
@@ -190,36 +222,48 @@ class SVNClient(CommandLineClient):
         for kwarg in kwargs:
             options[kwarg] = kwargs[kwarg]
         result = self.run_subcommand('info', *arguments, flags=flags,
-            cwd=cwd, **options)
+                                     cwd=cwd, **options)
         out, errs = result.communicate()
         if result.returncode != 0:
             raise SVNException(errs)
         else:
             return out, errs
 
-    def checkout(self, url, path=None, revision=None, quiet=False, non_recursive=False, depth=None, force=False, ignore_externals=False, cwd=None, *args, **kwargs):
+    def checkout(
+            self,
+            url,
+            path=None,
+            revision=None,
+            quiet=False,
+            non_recursive=False,
+            depth=None,
+            force=False,
+            ignore_externals=False,
+            cwd=None,
+            *args,
+            **kwargs):
         options = {}
         flags = []
         arguments = []
 
-        if type(url) == str:
+        if isinstance(url, str):
             arguments.append(url)
         else:
             arguments += url
         if path is not None:
             arguments.append(path)
         if revision:
-          options['revision'] = revision
+            options['revision'] = revision
         if quiet:
-          flags.append('quiet')
+            flags.append('quiet')
         if non_recursive:
-          flags.append('non-recursive')
+            flags.append('non-recursive')
         if depth:
-          options['depth'] = depth
+            options['depth'] = depth
         if force:
-          flags.append('force')
+            flags.append('force')
         if ignore_externals:
-          flags.append('ignore-externals')
+            flags.append('ignore-externals')
         if cwd is None:
             cwd = self.cwd
         for arg in args:
@@ -227,7 +271,7 @@ class SVNClient(CommandLineClient):
         for kwarg in kwargs:
             options[kwarg] = kwargs[kwarg]
         result = self.run_subcommand('checkout', *arguments, flags=flags,
-            cwd=cwd, **options)
+                                     cwd=cwd, **options)
         out, errs = result.communicate()
         if result.returncode != 0:
             raise SVNException(errs)

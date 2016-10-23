@@ -1,6 +1,7 @@
 import shlex
 import subprocess
 
+
 def run_shell_command(command, cwd=None, output=False, env=None):
     if cwd:
         print("$ cd {path}".format(path=cwd))

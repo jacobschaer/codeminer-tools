@@ -1,4 +1,6 @@
-import os, tempfile, shutil
+import os
+import tempfile
+import shutil
 from io import StringIO
 
 import git
@@ -6,16 +8,19 @@ import git
 from codeminer.repositories.repository import change_dir, Repository
 from codeminer.repositories.change import ChangeType, Change, ChangeSet
 
+
 def open_repository(path, workspace=None, **kwargs):
-    cleanup=False
+    cleanup = False
     if not os.path.exists(path):
         checkout_path = tempfile.mkdtemp(dir=workspace)
         client = git.Repo.clone_from(path, checkout_path, **kwargs)
         path = checkout_path
-        cleanup=True
+        cleanup = True
     return GitRepository(path, cleanup=cleanup)
 
+
 class GitRepository(Repository):
+
     def __init__(self, path, cleanup=False):
         self.cleanup = cleanup
         self.path = path
@@ -57,7 +62,7 @@ class GitRepository(Repository):
             for item in commit.tree.traverse():
                 if item.type == 'blob':
                     changes.append(Change(self, None, None, item.path,
-                        identifier, ChangeType.add))
+                                          identifier, ChangeType.add))
 
         else:
             # Default to using the first parent
@@ -73,14 +78,15 @@ class GitRepository(Repository):
                     previous_path = None
                     for parent in parents:
                         for previous_blob in parent.tree.traverse():
-                            if ((previous_blob.type == 'blob') and
-                                (previous_blob.binsha == diff.b_blob.binsha)):
-                                    action = ChangeType.copy
-                                    previous_revision = parent.binsha
-                                    previous_path = previous_blob.path
-                                    break
+                            if ((previous_blob.type == 'blob') and (
+                                    previous_blob.binsha == diff.b_blob.binsha)):
+                                action = ChangeType.copy
+                                previous_revision = parent.binsha
+                                previous_path = previous_blob.path
+                                break
                         # We're lazy... first match is good enough, break out.. useful
-                        # if there's multiple parents - we only search as many as necessary
+                        # if there's multiple parents - we only search as many
+                        # as necessary
                         if previous_path is not None:
                             break
                 elif action == 'D':
@@ -92,7 +98,8 @@ class GitRepository(Repository):
                     current_path = None
                 elif action[0] == 'R':
                     # Rename - so must have been a similar file in the tree
-                    # Typically these are in the form 'R100' which means 100% match
+                    # Typically these are in the form 'R100' which means 100%
+                    # match
                     if ((action[1:] == '100') or (diff.a_blob == diff.b_blob)):
                         action = ChangeType.move
                     else:
@@ -105,13 +112,27 @@ class GitRepository(Repository):
                 else:
                     raise Exception("Unknown Git Action Type: %s" % action)
 
-                changes.append(Change(self, previous_path, previous_revision, current_path,
-                     current_revision, action))
-        return ChangeSet(changes, tags=tags, identifier=identifier, author=author, message=message, timestamp=date)
+                changes.append(
+                    Change(
+                        self,
+                        previous_path,
+                        previous_revision,
+                        current_path,
+                        current_revision,
+                        action))
+        return ChangeSet(
+            changes,
+            tags=tags,
+            identifier=identifier,
+            author=author,
+            message=message,
+            timestamp=date)
 
     @change_dir
     def get_file_contents(self, path, revision=None):
         commit = self.client.commit(revision)
-        for blob in commit.tree.traverse(predicate=lambda obj, depth: obj.path == path):
+        for blob in commit.tree.traverse(
+                predicate=lambda obj,
+                depth: obj.path == path):
             return blob.data_stream
         return None

@@ -13,6 +13,7 @@ from codeminer.repositories.repository import Repository
 from codeminer.repositories.change import ChangeType, Change, ChangeSet
 from codeminer.clients.svn import SVNClient
 
+
 def open_repository(path, workspace=None, **kwargs):
     if os.path.exists(path):
         return SVNRepository(path)
@@ -31,7 +32,9 @@ def open_repository(path, workspace=None, **kwargs):
         working_copy_path = os.path.join(checkout_path, os.path.basename(path))
         return SVNRepository(working_copy_path, cleanup=True)
 
+
 class SVNRepository(Repository):
+
     def __init__(self, path, cleanup=False):
         self.path = path
         self.client = SVNClient(cwd=self.path)
@@ -45,7 +48,7 @@ class SVNRepository(Repository):
     def info(self, path=None, revision=None):
         if (path is not None) and (revision is not None):
             path = '{path}@{revision}'.format(
-                path = path, revision = revision)
+                path=path, revision=revision)
 
         out, err = self.client.info(xml=True, target=path, revision=revision)
         return xmltodict.parse(out)['info']['entry']
@@ -53,13 +56,16 @@ class SVNRepository(Repository):
     def walk_history(self):
         out, err = self.client.log(xml=True, verbose=True)
         print(out, err)
-        for revision, author, timestamp, message, changes in self._read_log_xml(out):
+        for revision, author, timestamp, message, changes in self._read_log_xml(
+                out):
             yield ChangeSet(changes, None, revision, author, message, timestamp)
 
     def get_changeset(self, revision=None):
-        out, err = self.client.log(xml=True, revision=revision, verbose=True, limit=1)
+        out, err = self.client.log(
+            xml=True, revision=revision, verbose=True, limit=1)
         print(out, err)
-        revision, author, timestamp, message, changes = self._read_log_xml(out).__next__()
+        revision, author, timestamp, message, changes = self._read_log_xml(
+            out).__next__()
         return ChangeSet(changes, None, revision, author, message, timestamp)
 
     def _read_log_xml(self, log):
@@ -108,13 +114,13 @@ class SVNRepository(Repository):
                 previous_revision = str(revision - 1)
 
             changes.append(Change(self, previous_path, previous_revision,
-               current_path, current_revision, action))
+                                  current_path, current_revision, action))
 
         return revision, author, date, message, changes
-
 
     def get_file_contents(self, path, revision=None):
         if revision:
             path = '{path}@{revision}'.format(path=path, revision=revision)
-        out, err = self.client.cat(path) #, ignore_keywords=True only works SVN 1.7+
+        # , ignore_keywords=True only works SVN 1.7+
+        out, err = self.client.cat(path)
         return BytesIO(out)

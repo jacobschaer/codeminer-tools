@@ -8,7 +8,9 @@ import unittest
 
 from codeminer.repositories import hg, change
 
+
 class TestHgReads(unittest.TestCase):
+
     @classmethod
     def setUpClass(cls):
         cls.repository_path = tempfile.mkdtemp()
@@ -52,16 +54,20 @@ class TestHgReads(unittest.TestCase):
         mock_tempfile.mkdtemp.return_value = 'destination'
         repository = hg.open_repository(self.repository_path)
         repository.cleanup = False
-        mock.call.clone.assert_called_with(source=self.repository_path, dest="destination"),
+        mock.call.clone.assert_called_with(
+            source=self.repository_path, dest="destination"),
         self.assertTrue(mock.call.clone.open.called)
 
     @mock.patch('codeminer.repositories.hg.hglib')
     @mock.patch('codeminer.repositories.hg.tempfile')
     def test_connect_remote_repository(self, mock_tempfile, mock_hg):
         mock_tempfile.mkdtemp.return_value = 'destination'
-        repository = hg.open_repository("https://www.mercurial-scm.org/repo/hello")
+        repository = hg.open_repository(
+            "https://www.mercurial-scm.org/repo/hello")
         repository.cleanup = False
-        mock.call.clone.assert_called_with(source="https://www.mercurial-scm.org/repo/hello", dest="destination"),
+        mock.call.clone.assert_called_with(
+            source="https://www.mercurial-scm.org/repo/hello",
+            dest="destination"),
         self.assertTrue(mock.call.clone.open.called)
 
     def test_get_object_at_tip(self):
@@ -77,8 +83,10 @@ class TestHgReads(unittest.TestCase):
     def test_get_changeset(self):
         sut = hg.open_repository(self.repository_path)
         changeset = sut.get_changeset('0')
-        self.assertEqual(changeset.changes,
-            [change.Change(sut, None, None, "a.txt", '0', change.ChangeType.add)])
+        self.assertEqual(
+            changeset.changes, [
+                change.Change(
+                    sut, None, None, "a.txt", '0', change.ChangeType.add)])
 
     def test_get_modify_change(self):
         sut = hg.open_repository(self.repository_path)
@@ -105,7 +113,9 @@ class TestHgReads(unittest.TestCase):
         sut = hg.open_repository(self.repository_path)
         changeset = sut.get_changeset('5')
         changeset.optimize()
-        self.assertEqual(changeset.changes[0].action, change.ChangeType.derived)
+        self.assertEqual(
+            changeset.changes[0].action,
+            change.ChangeType.derived)
 
     def test_walk_history(self):
         sut = hg.open_repository(self.repository_path)

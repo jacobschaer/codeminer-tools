@@ -9,5 +9,5 @@ requires = [
 setup(name='codeminer-tools',
       install_requires=requires,
       license='GPLv3',
-      packages=['codeminer_tools'])
+      packages=['codeminer_tools']
 )

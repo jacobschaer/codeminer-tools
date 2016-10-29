@@ -7,10 +7,10 @@ import subprocess
 
 import xml.etree.ElementTree as ET
 
-from codeminer.clients.commandline import CommandLineClient
-from codeminer.clients.cvs import CVSClient
-from codeminer.repositories.change import ChangeType, Change, ChangeSet
-from codeminer.repositories.repository import Repository
+from codeminer_tools.clients.commandline import CommandLineClient
+from codeminer_tools.clients.cvs import CVSClient
+from codeminer_tools.repositories.change import ChangeType, Change, ChangeSet
+from codeminer_tools.repositories.repository import Repository
 
 
 def open_repository(path, cvs_root=None, workspace=None, **kwargs):

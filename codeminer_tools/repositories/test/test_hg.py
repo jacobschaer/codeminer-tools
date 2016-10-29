@@ -6,7 +6,7 @@ import subprocess
 import tempfile
 import unittest
 
-from codeminer.repositories import hg, change
+from codeminer_tools.repositories import hg, change
 
 
 class TestHgReads(unittest.TestCase):
@@ -48,8 +48,8 @@ class TestHgReads(unittest.TestCase):
     def tearDownClass(cls):
         shutil.rmtree(cls.repository_path)
 
-    @mock.patch('codeminer.repositories.hg.hglib')
-    @mock.patch('codeminer.repositories.hg.tempfile')
+    @mock.patch('codeminer_tools.repositories.hg.hglib')
+    @mock.patch('codeminer_tools.repositories.hg.tempfile')
     def test_connect_local_repository(self, mock_tempfile, mock_hg):
         mock_tempfile.mkdtemp.return_value = 'destination'
         repository = hg.open_repository(self.repository_path)
@@ -58,8 +58,8 @@ class TestHgReads(unittest.TestCase):
             source=self.repository_path, dest="destination"),
         self.assertTrue(mock.call.clone.open.called)
 
-    @mock.patch('codeminer.repositories.hg.hglib')
-    @mock.patch('codeminer.repositories.hg.tempfile')
+    @mock.patch('codeminer_tools.repositories.hg.hglib')
+    @mock.patch('codeminer_tools.repositories.hg.tempfile')
     def test_connect_remote_repository(self, mock_tempfile, mock_hg):
         mock_tempfile.mkdtemp.return_value = 'destination'
         repository = hg.open_repository(

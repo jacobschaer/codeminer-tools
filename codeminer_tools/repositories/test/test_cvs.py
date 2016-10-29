@@ -7,7 +7,7 @@ import tempfile
 import time
 import unittest
 
-from codeminer.repositories import cvs, change
+from codeminer_tools.repositories import cvs, change
 from test_utils import run_shell_command
 
 global_commit_counter = 0

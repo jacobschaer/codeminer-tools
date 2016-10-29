@@ -1,12 +1,13 @@
 from setuptools import setup
 
 requires = [
-    'pyramid',
     'python-hglib',
     'gitpython',
     'xmltodict'
 ]
 
-setup(name='codeminer',
+setup(name='codeminer-tools',
       install_requires=requires,
+      license='GPLv3',
+      packages=['codeminer_tools'])
 )

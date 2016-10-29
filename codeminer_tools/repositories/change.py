@@ -1,6 +1,6 @@
 from enum import Enum
 
-from codeminer.repositories.file import RepositoryFile
+from codeminer_tools.repositories.file import RepositoryFile
 
 
 class ChangeType(Enum):

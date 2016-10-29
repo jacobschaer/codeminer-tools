@@ -2,7 +2,7 @@ import os
 import subprocess
 from typing import Dict, List, Optional, Union, Tuple
 
-from codeminer.clients.commandline import CommandLineClient
+from codeminer_tools.clients.commandline import CommandLineClient
 
 
 class CVSException(Exception):

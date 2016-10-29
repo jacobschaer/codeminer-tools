@@ -6,8 +6,8 @@ from io import BytesIO
 import hglib
 from hglib.util import b
 
-from codeminer.repositories.repository import Repository
-from codeminer.repositories.change import ChangeType, Change, ChangeSet
+from codeminer_tools.repositories.repository import Repository
+from codeminer_tools.repositories.change import ChangeType, Change, ChangeSet
 
 
 def change_dir(function):

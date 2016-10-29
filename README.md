@@ -1,8 +1,8 @@
-# codeminer
+# codeminer-tools
 Tool for analyzing code lineage
 
 ## Build Information
-[![Build Status](https://travis-ci.org/jacobschaer/codeminer.svg?branch=master)](https://travis-ci.org/jacobschaer/codeminer)
+[![Build Status](https://travis-ci.org/jacobschaer/codeminer_tools.svg?branch=master)](https://travis-ci.org/jacobschaer/codeminer-tools)
 
 ## Motivation
 At a previous job, an audit of intellectual property rights for software sparked an effort to determine the legacy of each file in our repositories. Unfortunately, the codebase has had many homes over the years including:
@@ -18,7 +18,7 @@ Since each version control system has its own unique peculiarities, a great deal
 ## Initial Goals:
   
   * Support reading/writing to Mercurial (Hg), Git, and SVN 
-  * Support scraping file history into common database
+  * Support scraping file history into common format
   * Support basic commit analysis to simplify commit actions
     - Detect moves/copies where not directly implemented by repository
     - Detect compound changes like move/copy followed by modification
@@ -27,7 +27,3 @@ Since each version control system has its own unique peculiarities, a great deal
 
   * Support proprietary repositories such as VSS and Perforce
   * Support "legacy" repository types such as CVS and RCS
-  * Support "advanced" commit analysis:
-    - Detect lineage across commits and repositories
-    - Rate similarity between two files for manual lineage adjustment
-  * Full web-app

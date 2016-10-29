@@ -12,4 +12,4 @@ install:
   - "pip install -r requirements.txt"
   - python setup.py -q install
 # command to run tests
-script: nosetests -w codeminer --with-coverage --cover-package=codeminer $*
+script: nosetests -w codeminer_tools --with-coverage --cover-package=codeminer_tools $*

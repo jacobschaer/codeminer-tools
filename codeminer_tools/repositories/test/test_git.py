@@ -6,8 +6,8 @@ import subprocess
 import tempfile
 import unittest
 
-import codeminer.repositories.git as git
-import codeminer.repositories.change as change
+import codeminer_tools.repositories.git as git
+import codeminer_tools.repositories.change as change
 
 
 class TestGitReads(unittest.TestCase):

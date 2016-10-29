@@ -9,10 +9,10 @@ import tempfile
 import time
 import unittest
 
-from codeminer.clients import cvs
+from codeminer_tools.clients import cvs
 
 class TestCVSCommandLines(unittest.TestCase):
-    @mock.patch('codeminer.clients.commandline.subprocess.Popen')
+    @mock.patch('codeminer_tools.clients.commandline.subprocess.Popen')
     def test_add_single_file(self, commandline_mock):
         commandline_mock.return_value = mock.Mock(returncode=0, autospec=True)
         commandline_mock.return_value.communicate = mock.Mock(return_value = (None, None))
@@ -24,7 +24,7 @@ class TestCVSCommandLines(unittest.TestCase):
         self.assertEqual(kwargs['cwd'], 'test_dir')
         self.assertEqual(kwargs['env']['CVSROOT'], 'test_root')
 
-    @mock.patch('codeminer.clients.commandline.subprocess.Popen')
+    @mock.patch('codeminer_tools.clients.commandline.subprocess.Popen')
     def test_add_multiple_file(self, commandline_mock):
         commandline_mock.return_value = mock.Mock(returncode=0, autospec=True)
         commandline_mock.return_value.communicate = mock.Mock(return_value = (None, None))
@@ -34,7 +34,7 @@ class TestCVSCommandLines(unittest.TestCase):
         args, kwargs = commandline_mock.call_args
         self.assertEqual((['cvs', 'add', '-m', '"asdf"', 'a.txt', 'b.txt'],), args)
 
-    @mock.patch('codeminer.clients.commandline.subprocess.Popen')
+    @mock.patch('codeminer_tools.clients.commandline.subprocess.Popen')
     def test_checkout_file(self, commandline_mock):
         commandline_mock.return_value = mock.Mock(returncode=0, autospec=True)
         commandline_mock.return_value.communicate = mock.Mock(return_value = (None, None))
@@ -44,7 +44,7 @@ class TestCVSCommandLines(unittest.TestCase):
         args, kwargs = commandline_mock.call_args
         self.assertEqual((['cvs', 'checkout', '-p', 'a.txt'],), args)
 
-    @mock.patch('codeminer.clients.commandline.subprocess.Popen')
+    @mock.patch('codeminer_tools.clients.commandline.subprocess.Popen')
     def test_commit(self, commandline_mock):
         commandline_mock.return_value = mock.Mock(returncode=0, autospec=True)
         commandline_mock.return_value.communicate = mock.Mock(return_value = (None, None))
@@ -54,7 +54,7 @@ class TestCVSCommandLines(unittest.TestCase):
         args, kwargs = commandline_mock.call_args
         self.assertEqual((['cvs', 'commit', '-m', '"test message"'],), args)
 
-    @mock.patch('codeminer.clients.commandline.subprocess.Popen')
+    @mock.patch('codeminer_tools.clients.commandline.subprocess.Popen')
     def test_commit_files(self, commandline_mock):
         commandline_mock.return_value = mock.Mock(returncode=0, autospec=True)
         commandline_mock.return_value.communicate = mock.Mock(return_value = (None, None))

@@ -5,8 +5,8 @@ from io import StringIO
 
 import git
 
-from codeminer.repositories.repository import change_dir, Repository
-from codeminer.repositories.change import ChangeType, Change, ChangeSet
+from codeminer_tools.repositories.repository import change_dir, Repository
+from codeminer_tools.repositories.change import ChangeType, Change, ChangeSet
 
 
 def open_repository(path, workspace=None, **kwargs):

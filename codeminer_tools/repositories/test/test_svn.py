@@ -6,8 +6,8 @@ import subprocess
 import tempfile
 import unittest
 
-import codeminer.repositories.svn as svn
-import codeminer.repositories.change as change
+import codeminer_tools.repositories.svn as svn
+import codeminer_tools.repositories.change as change
 
 from test_utils import run_shell_command
 
@@ -44,7 +44,7 @@ class TestSVNReads(unittest.TestCase):
         run_shell_command('svn up', cwd=self.repo_working_directory)
 
     def test_get_info(self):
-        sut = svn.open_repository(self.repo_working_directory)
+        sut = svn.SVNRepository(self.repo_working_directory)
         info = sut.info()
         print(info)
         self.assertEqual(info['url'], self.repo_url)
@@ -61,7 +61,7 @@ class TestSVNReads(unittest.TestCase):
             'svn commit -m "Test"',
             cwd=self.repo_working_directory)
         run_shell_command('svn up', cwd=self.repo_working_directory)
-        sut = svn.open_repository(self.repo_working_directory)
+        sut = svn.SVNRepository(self.repo_working_directory)
         revision = sut.info()['commit']['@revision']
         changes = sut.get_changeset(revision).changes
         self.assertEqual(
@@ -82,7 +82,7 @@ class TestSVNReads(unittest.TestCase):
             'svn commit -m "Test"',
             cwd=self.repo_working_directory)
         run_shell_command('svn up', cwd=self.repo_working_directory)
-        sut = svn.open_repository(self.repo_working_directory)
+        sut = svn.SVNRepository(self.repo_working_directory)
         revision = sut.info()['commit']['@revision']
         changes = sut.get_changeset(revision).changes
         self.assertEqual(
@@ -106,7 +106,7 @@ class TestSVNReads(unittest.TestCase):
             'svn commit -m "Test"',
             cwd=self.repo_working_directory)
         run_shell_command('svn up', cwd=self.repo_working_directory)
-        sut = svn.open_repository(self.repo_working_directory)
+        sut = svn.SVNRepository(self.repo_working_directory)
         revision = sut.info()['commit']['@revision']
         changes = sut.get_changeset(revision).changes
         self.assertEqual(
@@ -129,7 +129,7 @@ class TestSVNReads(unittest.TestCase):
             'svn commit -m "Test"',
             cwd=self.repo_working_directory)
         run_shell_command('svn up', cwd=self.repo_working_directory)
-        sut = svn.open_repository(self.repo_working_directory)
+        sut = svn.SVNRepository(self.repo_working_directory)
         revision = sut.info()['commit']['@revision']
         changes = sut.get_changeset(revision).changes
         self.assertEqual(
@@ -147,13 +147,27 @@ class TestSVNReads(unittest.TestCase):
             'svn commit -m "Test"',
             cwd=self.repo_working_directory)
         run_shell_command('svn up', cwd=self.repo_working_directory)
-        sut = svn.open_repository(self.repo_working_directory)
+        sut = svn.SVNRepository(self.repo_working_directory)
         revision = sut.info()['commit']['@revision']
         self.assertEqual(
             sut.get_file_contents(
                 'a.txt',
                 revision=revision).read(),
             b'a')
+
+    def test_get_properties(self):
+        test_file_path = os.path.join(self.repo_working_directory, 'a.txt')
+        with open(test_file_path, 'wb') as test_file:
+            test_file.write(b'a')
+        run_shell_command('svn add a.txt', cwd=self.repo_working_directory)
+        run_shell_command('svn propset a:b c a.txt', cwd=self.repo_working_directory)
+        run_shell_command(
+            'svn commit -m "Test"',
+            cwd=self.repo_working_directory)
+        run_shell_command('svn up', cwd=self.repo_working_directory)
+        sut = svn.SVNRepository(self.repo_working_directory)
+        revision = sut.info()['commit']['@revision']
+        self.assertTrue(('a:b', 'c') in sut.get_properties('a.txt', revision=revision).items())
 
 if __name__ == '__main__':
     unittest.main()

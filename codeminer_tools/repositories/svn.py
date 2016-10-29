@@ -9,41 +9,38 @@ import xml.etree.ElementTree as ET
 
 import xmltodict
 
-from codeminer.repositories.repository import Repository
-from codeminer.repositories.change import ChangeType, Change, ChangeSet
-from codeminer.clients.svn import SVNClient
-
-
-def open_repository(path, workspace=None, **kwargs):
-    if os.path.exists(path):
-        return SVNRepository(path)
-    else:
-        basename = os.path.basename(path)
-        revision = None
-        if '@' in basename:
-            basename, revision = basename.split('@')
-        checkout_path = tempfile.mkdtemp(dir=workspace)
-        client = SVNClient()
-        if revision is not None:
-            client.checkout(path, quiet=True, cwd=checkout_path)
-        else:
-            client.checkout(path, quiet=True, cwd=checkout_path)
-
-        working_copy_path = os.path.join(checkout_path, os.path.basename(path))
-        return SVNRepository(working_copy_path, cleanup=True)
+from codeminer_tools.repositories.repository import Repository
+from codeminer_tools.repositories.change import ChangeType, Change, ChangeSet
+from codeminer_tools.clients.svn import SVNClient, SVNException
 
 
 class SVNRepository(Repository):
 
-    def __init__(self, path, cleanup=False):
-        self.path = path
-        self.client = SVNClient(cwd=self.path)
-        self.cleanup = cleanup
+    def __init__(self, path, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if os.path.exists(path):
+            self.working_copy = path
+            self.cleanup = False
+        else:
+            basename = os.path.basename(path)
+            revision = None
+            if '@' in basename:
+                basename, revision = basename.split('@')
+            checkout_path = tempfile.mkdtemp(dir=self.workspace)
+            client = SVNClient(username=self.username, password=self.password)
+            client.checkout(path, cwd=checkout_path, quiet=True, revision=revision)
+            self.working_copy = os.path.join(checkout_path, os.path.basename(path))
+            self.cleanup = True
+        self.client = SVNClient(username=self.username, password=self.password, cwd=self.working_copy)
+        self.origin = self.info()['url']
         self.name = 'SVN'
 
     def __del__(self):
         if self.cleanup:
-            shutil.rmtree(self.path)
+            try:
+               shutil.rmtree(self.working_copy)
+            except FileNotFoundError:
+                pass
 
     def info(self, path=None, revision=None):
         if (path is not None) and (revision is not None):
@@ -55,7 +52,6 @@ class SVNRepository(Repository):
 
     def walk_history(self):
         out, err = self.client.log(xml=True, verbose=True)
-        print(out, err)
         for revision, author, timestamp, message, changes in self._read_log_xml(
                 out):
             yield ChangeSet(changes, None, revision, author, message, timestamp)
@@ -68,15 +64,29 @@ class SVNRepository(Repository):
             out).__next__()
         return ChangeSet(changes, None, revision, author, message, timestamp)
 
+    def get_properties(self, path, revision=None):
+        out, err = self.client.proplist(path,
+            xml=True, revision=revision, verbose=True)
+        tree = ET.fromstring(out)
+        properties = dict()
+        for svnprop in tree.find('target').findall('property'):
+            name = svnprop.get('name')
+            value = svnprop.text
+            properties[name] = value
+        return properties
+
     def _read_log_xml(self, log):
         tree = ET.fromstring(log)
         for logentry in tree.findall('logentry'):
             yield self._read_logentry_xml(logentry)
 
     def _read_logentry_xml(self, logentry):
-        author = logentry.find('author').text
-        date = logentry.find('date').text
-        message = logentry.find('msg').text
+        # SVN does *not* require author, date, or messages... it's
+        # unusual to not find one, but it can happen. None will have
+        # to do for now.
+        author = getattr(logentry.find('author'), 'text', None)
+        date = getattr(logentry.find('date'), 'text', None)
+        message = getattr(logentry.find('msg'), 'text', None)
         revision = int(logentry.get('revision'))
 
         changes = list()
@@ -106,7 +116,15 @@ class SVNRepository(Repository):
                 current_revision = None
                 previous_path = path.text[1:]
                 previous_revision = str(revision - 1)
-            elif action_string == 'M':
+            else:
+                # Modify ('M') and Replace ('R')
+                # Per SVN docs, 'replace' means:
+                # > Item has been replaced in your working copy.
+                # > This means the file was scheduled for deletion,
+                # > and then a new file with the same name was scheduled
+                # > for addition in its place.
+                # If the commit had the copyfrom history, we would treat this
+                # as a 'copy', but it didn't... so modify is a good approximation
                 action = ChangeType.modify
                 current_path = path.text[1:]
                 current_revision = str(revision)

@@ -2,7 +2,7 @@ import os
 import subprocess
 from typing import Dict, List, Optional, Union, Tuple
 
-from codeminer.clients.commandline import CommandLineClient
+from codeminer_tools.clients.commandline import CommandLineClient
 
 
 class SVNException(Exception):
@@ -11,9 +11,11 @@ class SVNException(Exception):
 
 class SVNClient(CommandLineClient):
 
-    def __init__(self, binary='svn', cwd=None):
+    def __init__(self, binary='svn', cwd=None, username=None, password=None):
         self.cwd = cwd
         self.name = 'SVN'
+        self.username = username
+        self.password = password
         env = os.environ.copy()
         super().__init__(binary, env=env)
 
@@ -40,6 +42,10 @@ class SVNClient(CommandLineClient):
             flags.append('ignore-keywords')
         if cwd is None:
             cwd = self.cwd
+        if self.username is not None:
+            options['username'] = self.username
+        if self.password is not None:
+            options['password'] = self.password
         for arg in args:
             flags.append(arg)
         for kwarg in kwargs:
@@ -169,6 +175,10 @@ class SVNClient(CommandLineClient):
             options['search-and'] = search_and
         if cwd is None:
             cwd = self.cwd
+        if self.username is not None:
+            options['username'] = self.username
+        if self.password is not None:
+            options['password'] = self.password
         for arg in args:
             flags.append(arg)
         for kwarg in kwargs:
@@ -217,6 +227,10 @@ class SVNClient(CommandLineClient):
             flags.append('no-newline')
         if cwd is None:
             cwd = self.cwd
+        if self.username is not None:
+            options['username'] = self.username
+        if self.password is not None:
+            options['password'] = self.password
         for arg in args:
             flags.append(arg)
         for kwarg in kwargs:
@@ -266,6 +280,10 @@ class SVNClient(CommandLineClient):
             flags.append('ignore-externals')
         if cwd is None:
             cwd = self.cwd
+        if self.username is not None:
+            options['username'] = self.username
+        if self.password is not None:
+            options['password'] = self.password
         for arg in args:
             flags.append(arg)
         for kwarg in kwargs:
@@ -276,4 +294,67 @@ class SVNClient(CommandLineClient):
         if result.returncode != 0:
             raise SVNException(errs)
         else:
+            return out, errs
+
+    def proplist(
+            self,
+            path=None,
+            verbose=True,
+            recursive=False,
+            depth=None,
+            revision=None,
+            quiet=True,
+            revprop=False,
+            xml=True,
+            changelist=None,
+            showinherited=False,
+            cwd=None,
+            *args,
+            **kwargs):
+        options = {}
+        flags = []
+        arguments = []
+
+        if path is not None:
+            if isinstance(path, str):
+                arguments.append(path)
+            else:
+                arguments += path
+        if revision is not None:
+            options['revision'] = revision
+        if recursive:
+            flags.append('recursive')
+        if verbose:
+            flags.append('verbose')
+        if quiet:
+            flags.append('quiet')
+        if depth is not None:
+            options['depth'] = depth
+        if revprop:
+            flags.append('revprop')
+        if xml:
+            flags.append('xml')
+        if changelist is not None:
+            options['changelist'] = changelist
+        if showinherited:
+            flags.append('show-inherited-props')
+        if cwd is None:
+            cwd = self.cwd
+        if self.username is not None:
+            options['username'] = self.username
+        if self.password is not None:
+            options['password'] = self.password
+        for arg in args:
+            flags.append(arg)
+        for kwarg in kwargs:
+            options[kwarg] = kwargs[kwarg]
+        print("")
+        print(options)
+        result = self.run_subcommand('proplist', *arguments, flags=flags,
+                                     cwd=cwd, **options)
+        out, errs = result.communicate()
+        if result.returncode != 0:
+            raise SVNException(errs)
+        else:
+            print(out, errs)
             return out, errs

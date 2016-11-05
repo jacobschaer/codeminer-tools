@@ -59,7 +59,7 @@ class ChangeSet:
 
 
 class Change:
-    """ Represents a change between to revisions of an object in a repository"""
+    """ Represents a change between two revisions of an object in a repository"""
 
     def __init__(
             self,

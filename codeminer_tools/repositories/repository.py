@@ -14,6 +14,6 @@ def change_dir(function):
 
 class Repository:
     def __init__(self, username=None, password=None, workspace=None):
-        self.username = username
-        self.password = password
-        self.workspace = workspace
+        self.username = username if username else None
+        self.password = password if password else None
+        self.workspace = workspace if workspace else None

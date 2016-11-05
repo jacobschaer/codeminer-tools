@@ -22,6 +22,8 @@ class SVNRepository(Repository):
             self.working_copy = path
             self.cleanup = False
         else:
+            if path[-1] == '/':
+                path = path[:-1]
             basename = os.path.basename(path)
             revision = None
             if '@' in basename:
@@ -52,6 +54,7 @@ class SVNRepository(Repository):
 
     def walk_history(self):
         out, err = self.client.log(xml=True, verbose=True)
+        # TODO: Parse XML using SAX parser - preferably streaming from stdin
         for revision, author, timestamp, message, changes in self._read_log_xml(
                 out):
             yield ChangeSet(changes, None, revision, author, message, timestamp)
@@ -140,5 +143,15 @@ class SVNRepository(Repository):
         if revision:
             path = '{path}@{revision}'.format(path=path, revision=revision)
         # , ignore_keywords=True only works SVN 1.7+
+        # TODO: Implement in Python
         out, err = self.client.cat(path)
         return BytesIO(out)
+
+    def list_files(self, path, revision=None):
+        out, err = self.client.list(path,
+            xml=True, revision=revision, verbose=False)
+        tree = ET.fromstring(out)
+        for entry in tree.find('list').findall('entry'):
+            name = entry.get('name')
+            revision = entry.get('name')
+            yield(RepositoryFile(path = name, revision = revision))

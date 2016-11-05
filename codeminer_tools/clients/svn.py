@@ -358,3 +358,53 @@ class SVNClient(CommandLineClient):
         else:
             print(out, errs)
             return out, errs
+
+    def list(self,
+        path=None,
+        revision=None,
+        verbose=False,
+        recursive=True,
+        depth=None,
+        incremental=False,
+        xml=True,
+        include_externals=False,
+        cwd=None):
+        if path is not None:
+            if isinstance(path, str):
+                arguments.append(path)
+            else:
+                arguments += path
+        if revision is not None:
+            options['revision'] = revision
+        if recursive:
+            flags.append('recursive')
+        if verbose:
+            flags.append('verbose')
+        if depth is not None:
+            options['depth'] = depth
+        if incremental:
+            flags.append('incremental')
+        if xml:
+            flags.append('xml')
+        if include_externals:
+            flags.append('include-externals')
+        if cwd is None:
+            cwd = self.cwd
+        if self.username is not None:
+            options['username'] = self.username
+        if self.password is not None:
+            options['password'] = self.password
+        for arg in args:
+            flags.append(arg)
+        for kwarg in kwargs:
+            options[kwarg] = kwargs[kwarg]
+        print("")
+        print(options)
+        result = self.run_subcommand('list', *arguments, flags=flags,
+                                     cwd=cwd, **options)
+        out, errs = result.communicate()
+        if result.returncode != 0:
+            raise SVNException(errs)
+        else:
+            print(out, errs)
+            return out, errs

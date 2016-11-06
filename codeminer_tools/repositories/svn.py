@@ -53,18 +53,20 @@ class SVNRepository(Repository):
         return xmltodict.parse(out)['info']['entry']
 
     def walk_history(self):
-        out, err = self.client.log(xml=True, verbose=True)
-        # TODO: Parse XML using SAX parser - preferably streaming from stdin
+        out, err = self.client.log(xml=True, verbose=True, use_merge_history=True, all_props=True, streaming=True)
         for revision, author, timestamp, message, changes in self._read_log_xml(
                 out):
             yield ChangeSet(changes, None, revision, author, message, timestamp)
+        out.close()
+        err.close()
 
     def get_changeset(self, revision=None):
         out, err = self.client.log(
-            xml=True, revision=revision, verbose=True, limit=1)
-        print(out, err)
+            xml=True, revision=revision, verbose=True, use_merge_history=True, all_props=True, limit=1, streaming=True)
         revision, author, timestamp, message, changes = self._read_log_xml(
             out).__next__()
+        out.close()
+        err.close()
         return ChangeSet(changes, None, revision, author, message, timestamp)
 
     def get_properties(self, path, revision=None):
@@ -79,9 +81,13 @@ class SVNRepository(Repository):
         return properties
 
     def _read_log_xml(self, log):
-        tree = ET.fromstring(log)
-        for logentry in tree.findall('logentry'):
-            yield self._read_logentry_xml(logentry)
+        previous_element = None
+        for event, element in ET.iterparse(log):
+            if element.tag == 'logentry':
+                if previous_element is not None:
+                    previous_element.clear()
+                previous_element = element
+                yield self._read_logentry_xml(element)
 
     def _read_logentry_xml(self, logentry):
         # SVN does *not* require author, date, or messages... it's
@@ -134,8 +140,15 @@ class SVNRepository(Repository):
                 previous_path = path.text[1:]
                 previous_revision = str(revision - 1)
 
-            changes.append(Change(self, previous_path, previous_revision,
-                                  current_path, current_revision, action))
+            change = Change(self, previous_path, previous_revision,
+                                  current_path, current_revision, action)
+
+            # Identify merges - we only really care about the most recent 'merged revision'
+            if logentry.find('logentry'):
+                merged_revisions = [int(x.get('revision')) for x in logentry.findall('logentry')]
+                change.add_previous_file(self, previous_path, str(max(merged_revisions)))
+
+            changes.append(change)
 
         return revision, author, date, message, changes
 

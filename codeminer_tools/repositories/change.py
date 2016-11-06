@@ -40,10 +40,13 @@ class ChangeSet:
         redundant = []
         for copy in copies:
             for remove in removes:
-                if copy.previous_file.path == remove.previous_file.path:
-                    copy.action = ChangeType.move
-                    redundant.append(remove)
-                    break
+                copy_previous_file_paths = [x.path for x in copy.previous_files]
+                remove_previous_file_paths = [x.path for x in remove.previous_files]
+                for x in copy_previous_file_paths:
+                    if x in remove_previous_file_paths:
+                        copy.action = ChangeType.move
+                        redundant.append(remove)
+                        break
 
         # Filter out the redundant changes
         combined_changes = [x for x in self.changes if x not in redundant]
@@ -52,7 +55,7 @@ class ChangeSet:
         for change in combined_changes:
             if ((change.action == ChangeType.move) or
                     (change.action == ChangeType.copy)):
-                if (change.previous_file.read() != change.current_file.read()):
+                if (change.previous_files[0].read() != change.current_file.read()):
                     change.action = ChangeType.derived
 
         self.changes = combined_changes
@@ -69,22 +72,38 @@ class Change:
             current_path,
             current_revision,
             action):
-        self.previous_file = RepositoryFile(
-            repository, previous_path, previous_revision)
+        self.previous_files = []
+        if previous_path is not None:
+            self.previous_files.append(RepositoryFile(
+                repository, previous_path, previous_revision))
         self.current_file = RepositoryFile(
             repository, current_path, current_revision)
         self.action = action
 
+    def add_previous_file(
+            self,
+            repository,
+            previous_path,
+            previous_revision):
+        self.previous_files.append(RepositoryFile(
+            repository, previous_path, previous_revision
+            ))
+
     def __eq__(self, other):
         return ((self.action == other.action) and
-                (self.previous_file == other.previous_file) and
+                (self.previous_files == other.previous_files) and
                 (self.current_file == other.current_file))
 
     def __repr__(self):
-        return "{}: {}@{} => ({}) => {}: {}@{}".format(
-            self.previous_file.repository.name, self.previous_file.path,
-            self.previous_file.revision, self.action, self.current_file.repository.name,
-            self.current_file.path, self.current_file.revision)
+        if len(self.previous_files) > 0:
+            return "{}: {}@{} => ({}) => {}: {}@{}".format(
+                self.previous_files[0].repository.name, self.previous_files[0].path,
+                self.previous_files[0].revision, self.action, self.current_file.repository.name,
+                self.current_file.path, self.current_file.revision)
+        else:
+            return "{}: {}@{} => ({}) => {}: {}@{}".format(
+                None, None, None, self.action, self.current_file.repository.name,
+                self.current_file.path, self.current_file.revision)
 
     def __str__(self):
         if (self.action == ChangeType.add):
@@ -94,12 +113,12 @@ class Change:
             )
         elif (self.action == ChangeType.remove):
             return "Removed {name} (Last Rev: {revision})".format(
-                name=self.previous_file.path,
-                revision=self.previous_file.revision
+                name=self.previous_files[0].path,
+                revision=self.previous_files[0].revision
             )
         elif (self.action == ChangeType.modify):
             return "Modified {name} ({previous} ==> {current})".format(
                 name=self.current_file.path,
-                previous=self.previous_file.revision,
+                previous=self.previous_files[0].revision,
                 current=self.current_file.revision
             )

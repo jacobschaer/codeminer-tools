@@ -102,33 +102,33 @@ class HgRepository(Repository):
             if action == ' ':
                 _, current_path = status.pop()
                 action = ChangeType.copy
-                previsionious_path = path
-                previsionious_revision = parent_revision
+                previous_path = path
+                previous_revision = parent_revision
                 current_revision = revision
                 current_path = current_path.decode()
             elif action == 'M':
                 action = ChangeType.modify
                 current_path = path
                 current_revision = revision
-                previsionious_path = path
-                previsionious_revision = parent_revision
+                previous_path = path
+                previous_revision = parent_revision
             elif action == 'A':
                 action = ChangeType.add
                 current_path = path
                 current_revision = revision
-                previsionious_path = None
-                previsionious_revision = None
+                previous_path = None
+                previous_revision = None
             elif action == 'R':
                 action = ChangeType.remove
                 current_path = None
                 current_revision = None
-                previsionious_path = path
-                previsionious_revision = revision
+                previous_path = path
+                previous_revision = revision
 
             change = Change(
                 self,              # Repository
-                previsionious_path,     # Previsionious Path
-                previsionious_revision,  # Previsionious Revision
+                previous_path,     # Previsionious Path
+                previous_revision,  # Previsionious Revision
                 current_path,      # Current Path
                 current_revision,  # Current Revision
                 action             # Action

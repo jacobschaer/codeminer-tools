@@ -11,7 +11,7 @@ from codeminer_tools.clients.commandline import CommandLineClient
 from codeminer_tools.clients.cvs import CVSClient
 from codeminer_tools.repositories.change import ChangeType, Change, ChangeSet
 from codeminer_tools.repositories.repository import Repository
-
+from codeminer_tools.repositories.entity import EntityType
 
 def open_repository(path, cvs_root=None, workspace=None, **kwargs):
     if os.path.exists(path):
@@ -135,22 +135,28 @@ class CVSRepository(Repository):
                 action = ChangeType.remove
                 current_path = name
                 current_revision = revision
+                current_type = EntityType.file
                 previous_path = name
                 previous_revision = self.get_previous_version(revision)
+                previous_type = EntityType.file
             elif lines_added is None and lines_removed is None:
                 action = ChangeType.add
                 current_path = name
                 current_revision = str(revision)
+                current_type = EntityType.file
                 previous_path = None
                 previous_revision = None
+                previous_type = EntityType.file
             else:
                 action = ChangeType.modify
                 current_path = name
                 current_revision = str(revision)
+                current_type = EntityType.file
                 previous_path = name
                 previous_revision = self.get_previous_version(revision)
+                previous_type = EntityType.file
 
-            changes.append(Change(self, previous_path, previous_revision,
-                                  current_path, current_revision, action))
+            changes.append(Change(self, previous_path, previous_revision, previous_type,
+                                  current_path, current_revision, current_type, action))
 
         return author, date, message, changes

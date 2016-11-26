@@ -36,14 +36,14 @@ class ChangeSet:
 
         # Look for copies that are really "moves"
         # Note, somewhat confusingly this logic allows the possibility
-        # for a file to be "moved" to multiple other files
+        # for a entity to be "moved" to multiple other entities
         redundant = []
         for copy in copies:
             for remove in removes:
-                copy_previous_file_paths = [x.path for x in copy.previous_files]
-                remove_previous_file_paths = [x.path for x in remove.previous_files]
-                for x in copy_previous_file_paths:
-                    if x in remove_previous_file_paths:
+                copy_previous_entity_paths = [x.path for x in copy.previous_entities]
+                remove_previous_entity_paths = [x.path for x in remove.previous_entities]
+                for x in copy_previous_entity_paths:
+                    if x in remove_previous_entity_paths:
                         copy.action = ChangeType.move
                         redundant.append(remove)
                         break
@@ -55,7 +55,7 @@ class ChangeSet:
         for change in combined_changes:
             if ((change.action == ChangeType.move) or
                     (change.action == ChangeType.copy)):
-                if (change.previous_files[0].read() != change.current_file.read()):
+                if (change.previous_entities[0].read() != change.current_entity.read()):
                     change.action = ChangeType.derived
 
         self.changes = combined_changes
@@ -69,56 +69,58 @@ class Change:
             repository,
             previous_path,
             previous_revision,
+            previous_type,
             current_path,
             current_revision,
+            current_type,
             action):
-        self.previous_files = []
+        self.previous_entities = []
         if previous_path is not None:
-            self.previous_files.append(RepositoryFile(
+            self.previous_entities.append(RepositoryFile(
                 repository, previous_path, previous_revision))
-        self.current_file = RepositoryFile(
+        self.current_entity = RepositoryFile(
             repository, current_path, current_revision)
         self.action = action
 
-    def add_previous_file(
+    def add_previous_entity(
             self,
             repository,
             previous_path,
             previous_revision):
-        self.previous_files.append(RepositoryFile(
+        self.previous_entities.append(RepositoryFile(
             repository, previous_path, previous_revision
             ))
 
     def __eq__(self, other):
         return ((self.action == other.action) and
-                (self.previous_files == other.previous_files) and
-                (self.current_file == other.current_file))
+                (self.previous_entities == other.previous_entities) and
+                (self.current_entity == other.current_entity))
 
     def __repr__(self):
-        if len(self.previous_files) > 0:
+        if len(self.previous_entities) > 0:
             return "{}: {}@{} => ({}) => {}: {}@{}".format(
-                self.previous_files[0].repository.name, self.previous_files[0].path,
-                self.previous_files[0].revision, self.action, self.current_file.repository.name,
-                self.current_file.path, self.current_file.revision)
+                self.previous_entities[0].repository.name, self.previous_entities[0].path,
+                self.previous_entities[0].revision, self.action, self.current_entity.repository.name,
+                self.current_entity.path, self.current_entity.revision)
         else:
             return "{}: {}@{} => ({}) => {}: {}@{}".format(
-                None, None, None, self.action, self.current_file.repository.name,
-                self.current_file.path, self.current_file.revision)
+                None, None, None, self.action, self.current_entity.repository.name,
+                self.current_entity.path, self.current_entity.revision)
 
     def __str__(self):
         if (self.action == ChangeType.add):
             return "Added {name} (Current Rev: {revision})".format(
-                name=self.current_file.path,
-                revision=self.current_file.revision
+                name=self.current_entity.path,
+                revision=self.current_entity.revision
             )
         elif (self.action == ChangeType.remove):
             return "Removed {name} (Last Rev: {revision})".format(
-                name=self.previous_files[0].path,
-                revision=self.previous_files[0].revision
+                name=self.previous_entities[0].path,
+                revision=self.previous_entities[0].revision
             )
         elif (self.action == ChangeType.modify):
             return "Modified {name} ({previous} ==> {current})".format(
-                name=self.current_file.path,
-                previous=self.previous_files[0].revision,
-                current=self.current_file.revision
+                name=self.current_entity.path,
+                previous=self.previous_entities[0].revision,
+                current=self.current_entity.revision
             )

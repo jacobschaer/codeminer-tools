@@ -1,4 +1,4 @@
-import datetime
+import dateutil.parser
 from io import BytesIO
 import os
 import shlex
@@ -11,6 +11,10 @@ import xmltodict
 
 from codeminer_tools.repositories.repository import Repository
 from codeminer_tools.repositories.change import ChangeType, Change, ChangeSet
+from codeminer_tools.repositories.directory import RepositoryDirectory
+from codeminer_tools.repositories.file import RepositoryFile
+from codeminer_tools.repositories.entity import EntityType
+
 from codeminer_tools.clients.svn import SVNClient, SVNException
 
 
@@ -95,6 +99,7 @@ class SVNRepository(Repository):
         # to do for now.
         author = getattr(logentry.find('author'), 'text', None)
         date = getattr(logentry.find('date'), 'text', None)
+        date = dateutil.parser.parse(date)
         message = getattr(logentry.find('msg'), 'text', None)
         revision = int(logentry.get('revision'))
 
@@ -102,6 +107,15 @@ class SVNRepository(Repository):
         for path in logentry.find('paths'):
             action_string = path.get('action')
             copyfrom_path = path.get('copyfrom-path', None)
+            kind_string = path.get('kind', None)
+
+            if kind_string == 'dir':
+                kind = EntityType.directory
+            elif kind_string == 'file':
+                kind = EntityType.file
+            else:
+                continue
+
             # Copies are marked as 'A' by SVN but have metadata
             # that indicates otherwise
             if copyfrom_path is not None:
@@ -111,20 +125,26 @@ class SVNRepository(Repository):
                 action = ChangeType.add
                 current_path = path.text[1:]
                 current_revision = str(revision)
+                current_type = kind
                 previous_path = None
                 previous_revision = None
+                previous_type = None
             elif action_string == 'C':
                 action = ChangeType.copy
                 current_path = path.text[1:]
                 current_revision = str(revision)
+                current_type = kind
                 previous_path = path.get('copyfrom-path')[1:]
                 previous_revision = path.get('copyfrom-rev')
+                previous_type = kind
             elif action_string == 'D':
                 action = ChangeType.remove
                 current_path = None
                 current_revision = None
+                current_type = None
                 previous_path = path.text[1:]
                 previous_revision = str(revision - 1)
+                previous_type = kind
             else:
                 # Modify ('M') and Replace ('R')
                 # Per SVN docs, 'replace' means:
@@ -137,16 +157,18 @@ class SVNRepository(Repository):
                 action = ChangeType.modify
                 current_path = path.text[1:]
                 current_revision = str(revision)
+                current_type = kind
                 previous_path = path.text[1:]
                 previous_revision = str(revision - 1)
+                previous_type = kind
 
-            change = Change(self, previous_path, previous_revision,
-                                  current_path, current_revision, action)
+            change = Change(self, previous_path, previous_revision, previous_type,
+                                  current_path, current_revision, current_type, action)
 
             # Identify merges - we only really care about the most recent 'merged revision'
             if logentry.find('logentry'):
                 merged_revisions = [int(x.get('revision')) for x in logentry.findall('logentry')]
-                change.add_previous_file(self, previous_path, str(max(merged_revisions)))
+                change.add_previous_entity(self, previous_path, str(max(merged_revisions)))
 
             changes.append(change)
 
@@ -160,11 +182,15 @@ class SVNRepository(Repository):
         out, err = self.client.cat(path)
         return BytesIO(out)
 
-    def list_files(self, path, revision=None):
+    def list_entities(self, path, revision=None):
         out, err = self.client.list(path,
             xml=True, revision=revision, verbose=False)
         tree = ET.fromstring(out)
         for entry in tree.find('list').findall('entry'):
             name = entry.get('name')
             revision = entry.get('name')
-            yield(RepositoryFile(path = name, revision = revision))
+            kind = entry.get('kind')
+            if kind == 'dir':
+                yield(RepositoryDirectory(path = name, revision = revision))
+            elif kind == 'file':
+                yield(RepositoryFile(path = name, revision = revision))

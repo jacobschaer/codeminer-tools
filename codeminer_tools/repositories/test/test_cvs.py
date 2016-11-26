@@ -8,6 +8,7 @@ import time
 import unittest
 
 from codeminer_tools.repositories import cvs, change
+from codeminer_tools.repositories.entity import EntityType
 from test_utils import run_shell_command
 
 global_commit_counter = 0
@@ -60,7 +61,7 @@ class TestCVSReads(unittest.TestCase):
         self.assertEqual(
             changes, [
                 change.Change(
-                    sut, None, None, "a.txt", version, change.ChangeType.add)])
+                    sut, None, None, None, "a.txt", version, EntityType.file, change.ChangeType.add)])
 
     def test_get_remove_files(self):
         test_file_path = os.path.join(self.repo_working_directory, 'r.txt')
@@ -94,7 +95,7 @@ class TestCVSReads(unittest.TestCase):
         self.assertEqual(
             changes, [
                 change.Change(
-                    sut, "r.txt", previous_version, "r.txt", version, change.ChangeType.remove)])
+                    sut, "r.txt", previous_version, EntityType.file, "r.txt", version, EntityType.file, change.ChangeType.remove)])
 
     def test_get_modify_files(self):
         test_file_path = os.path.join(self.repo_working_directory, 'm.txt')
@@ -126,7 +127,7 @@ class TestCVSReads(unittest.TestCase):
         self.assertEqual(
             changes, [
                 change.Change(
-                    sut, "m.txt", previous_version, "m.txt", version, change.ChangeType.modify)])
+                    sut, "m.txt", previous_version,EntityType.file, "m.txt", version, EntityType.file,change.ChangeType.modify)])
 
     def test_get_module_name(self):
         sut = cvs.open_repository(self.repo_working_directory)

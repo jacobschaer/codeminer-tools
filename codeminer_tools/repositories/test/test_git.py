@@ -8,6 +8,7 @@ import unittest
 
 import codeminer_tools.repositories.git as git
 import codeminer_tools.repositories.change as change
+from codeminer_tools.repositories.entity import EntityType
 
 
 class TestGitReads(unittest.TestCase):
@@ -63,7 +64,7 @@ class TestGitReads(unittest.TestCase):
         self.assertEqual(
             changeset.changes, [
                 change.Change(
-                    sut, None, None, "test.txt", revision, change.ChangeType.add)])
+                    sut, None, None, None, "test.txt", revision, EntityType.file, change.ChangeType.add)])
 
     def test_get_removed_file(self):
         sut = git.open_repository(self.repository_path)
@@ -95,7 +96,7 @@ class TestGitReads(unittest.TestCase):
         self.assertEqual(
             changeset.changes, [
                 change.Change(
-                    sut, "test.txt", revision, None, None, change.ChangeType.remove)])
+                    sut, "test.txt", revision, EntityType.file, None, None, None, change.ChangeType.remove)])
 
     def test_get_modified_file(self):
         sut = git.open_repository(self.repository_path)
@@ -130,7 +131,7 @@ class TestGitReads(unittest.TestCase):
         self.assertEqual(
             changeset.changes, [
                 change.Change(
-                    sut, "test.txt", revision_a, "test.txt", revision_b, change.ChangeType.modify)])
+                    sut, "test.txt", revision_a, EntityType.file, "test.txt", revision_b, EntityType.file, change.ChangeType.modify)])
 
     def test_get_move_file(self):
         sut = git.open_repository(self.repository_path)
@@ -163,7 +164,7 @@ class TestGitReads(unittest.TestCase):
         self.assertEqual(
             changeset.changes, [
                 change.Change(
-                    sut, "test_old.txt", revision_a, "test.txt", revision_b, change.ChangeType.move)])
+                    sut, "test_old.txt", revision_a, EntityType.file, "test.txt", revision_b, EntityType.file, change.ChangeType.move)])
 
     def test_get_copied_file(self):
         sut = git.open_repository(self.repository_path)
@@ -198,7 +199,7 @@ class TestGitReads(unittest.TestCase):
         self.assertEqual(
             changeset.changes, [
                 change.Change(
-                    sut, "test_old.txt", revision_a, "test.txt", revision_b, change.ChangeType.copy)])
+                    sut, "test_old.txt", revision_a, EntityType.file, "test.txt", revision_b, EntityType.file, change.ChangeType.copy)])
 
     def test_get_derived_file(self):
         sut = git.open_repository(self.repository_path)
@@ -241,8 +242,10 @@ class TestGitReads(unittest.TestCase):
                          [change.Change(sut,
                                         "test_old.txt",
                                         revision_a,
+                                        EntityType.file,
                                         "test.txt",
                                         revision_b,
+                                        EntityType.file,
                                         change.ChangeType.derived)])
 
     def test_get_contents_at_head(self):

@@ -7,6 +7,7 @@ import git
 
 from codeminer_tools.repositories.repository import change_dir, Repository
 from codeminer_tools.repositories.change import ChangeType, Change, ChangeSet
+from codeminer_tools.repositories.entity import EntityType
 
 
 def open_repository(path, workspace=None, **kwargs):
@@ -61,8 +62,8 @@ class GitRepository(Repository):
         if not parents:
             for item in commit.tree.traverse():
                 if item.type == 'blob':
-                    changes.append(Change(self, None, None, item.path,
-                                          identifier, ChangeType.add))
+                    changes.append(Change(self, None, None, None, item.path,
+                                          identifier, EntityType.file, ChangeType.add))
 
         else:
             # Default to using the first parent
@@ -71,6 +72,9 @@ class GitRepository(Repository):
                 previous_path = diff.a_path
                 current_path = diff.b_path
                 current_revision = identifier
+                current_type = EntityType.file
+                previous_type = EntityType.file
+
                 if action == 'A':
                     # Add
                     action = ChangeType.add
@@ -93,8 +97,10 @@ class GitRepository(Repository):
                     # Delete
                     action = ChangeType.remove
                     previous_revision = parents[0].binsha
+                    previous_type = EntityType.file
                     previous_path = previous_path
                     current_revision = None
+                    current_type = None
                     current_path = None
                 elif action[0] == 'R':
                     # Rename - so must have been a similar file in the tree
@@ -117,8 +123,10 @@ class GitRepository(Repository):
                         self,
                         previous_path,
                         previous_revision,
+                        previous_type,
                         current_path,
                         current_revision,
+                        current_type,
                         action))
         return ChangeSet(
             changes,

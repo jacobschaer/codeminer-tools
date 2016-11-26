@@ -7,7 +7,7 @@ import tempfile
 import unittest
 
 from codeminer_tools.repositories import hg, change
-
+from codeminer_tools.repositories.entity import EntityType
 
 class TestHgReads(unittest.TestCase):
 
@@ -86,7 +86,7 @@ class TestHgReads(unittest.TestCase):
         self.assertEqual(
             changeset.changes, [
                 change.Change(
-                    sut, None, None, "a.txt", '0', change.ChangeType.add)])
+                    sut, None, None, None, "a.txt", '0', EntityType.file, change.ChangeType.add)])
 
     def test_get_modify_change(self):
         sut = hg.open_repository(self.repository_path)

@@ -8,6 +8,7 @@ import unittest
 
 import codeminer_tools.repositories.svn as svn
 import codeminer_tools.repositories.change as change
+from codeminer_tools.repositories.entity import EntityType
 
 from test_utils import run_shell_command
 
@@ -67,7 +68,7 @@ class TestSVNReads(unittest.TestCase):
         self.assertEqual(
             changes, [
                 change.Change(
-                    sut, None, None, "a.txt", revision, change.ChangeType.add)])
+                    sut, None, None, EntityType.file, "a.txt", revision, EntityType.file, change.ChangeType.add)])
 
     def test_get_remove_files(self):
         test_file = os.path.join(self.repo_working_directory, 'a.txt')
@@ -89,7 +90,7 @@ class TestSVNReads(unittest.TestCase):
             changes, [
                 change.Change(
                     sut, "a.txt", str(
-                        int(revision) - 1), None, None, change.ChangeType.remove)])
+                        int(revision) - 1), EntityType.file, None, None, None, change.ChangeType.remove)])
 
     def test_get_copy_files(self):
         test_file = os.path.join(self.repo_working_directory, 'a.txt')
@@ -113,7 +114,7 @@ class TestSVNReads(unittest.TestCase):
             changes, [
                 change.Change(
                     sut, "a.txt", str(
-                        int(revision) - 1), "b.txt", revision, change.ChangeType.copy)])
+                        int(revision) - 1), EntityType.file, "b.txt", revision, EntityType.file, change.ChangeType.copy)])
 
     def test_get_modified_files(self):
         test_file_path = os.path.join(self.repo_working_directory, 'a.txt')
@@ -133,10 +134,10 @@ class TestSVNReads(unittest.TestCase):
         revision = sut.info()['commit']['@revision']
         changes = sut.get_changeset(revision).changes
         self.assertEqual(
-            changes, [
-                change.Change(
-                    sut, "a.txt", str(
-                        int(revision) - 1), "a.txt", revision, change.ChangeType.modify)])
+                changes, [
+                    change.Change(
+                        sut, "a.txt", str(
+                            int(revision) - 1), EntityType.file, "a.txt", revision, EntityType.file, change.ChangeType.modify)])
 
     def test_get_file_contents(self):
         test_file_path = os.path.join(self.repo_working_directory, 'a.txt')
@@ -168,6 +169,22 @@ class TestSVNReads(unittest.TestCase):
         sut = svn.SVNRepository(self.repo_working_directory)
         revision = sut.info()['commit']['@revision']
         self.assertTrue(('a:b', 'c') in sut.get_properties('a.txt', revision=revision).items())
+
+    def test_get_directory_add(self):
+        test_dir_path = os.path.join(self.repo_working_directory, 'a')
+        os.makedirs(test_dir_path)
+        run_shell_command('svn add a', cwd=self.repo_working_directory)
+        run_shell_command(
+            'svn commit -m "Test"',
+            cwd=self.repo_working_directory)
+        run_shell_command('svn up', cwd=self.repo_working_directory)
+        sut = svn.SVNRepository(self.repo_working_directory)
+        revision = sut.info()['commit']['@revision']
+        changes = sut.get_changeset(revision).changes
+        self.assertEqual(
+                changes, [
+                    change.Change(
+                        sut, None, None, None, "a", revision, EntityType.directory, change.ChangeType.add)])
 
 if __name__ == '__main__':
     unittest.main()

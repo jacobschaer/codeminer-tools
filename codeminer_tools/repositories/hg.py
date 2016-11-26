@@ -7,6 +7,7 @@ import hglib
 from hglib.util import b
 
 from codeminer_tools.repositories.repository import Repository
+from codeminer_tools.repositories.entity import EntityType
 from codeminer_tools.repositories.change import ChangeType, Change, ChangeSet
 
 
@@ -104,33 +105,43 @@ class HgRepository(Repository):
                 action = ChangeType.copy
                 previous_path = path
                 previous_revision = parent_revision
+                previous_type = EntityType.file
                 current_revision = revision
+                current_type = EntityType.file
                 current_path = current_path.decode()
             elif action == 'M':
                 action = ChangeType.modify
                 current_path = path
                 current_revision = revision
+                current_type = EntityType.file
                 previous_path = path
                 previous_revision = parent_revision
+                previous_type = EntityType.file
             elif action == 'A':
                 action = ChangeType.add
                 current_path = path
                 current_revision = revision
+                current_type = EntityType.file
                 previous_path = None
                 previous_revision = None
+                previous_type = None
             elif action == 'R':
                 action = ChangeType.remove
                 current_path = None
                 current_revision = None
+                current_type = None
                 previous_path = path
                 previous_revision = revision
+                previous_type = EntityType.file
 
             change = Change(
                 self,              # Repository
-                previous_path,     # Previsionious Path
-                previous_revision,  # Previsionious Revision
+                previous_path,     # Previous Path
+                previous_revision, # Previous Revision
+                previous_type,     # Previous Type
                 current_path,      # Current Path
                 current_revision,  # Current Revision
+                current_type,      # Current Type
                 action             # Action
             )
             changes.append(change)

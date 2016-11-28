@@ -1,7 +1,8 @@
 from enum import Enum
 
 from codeminer_tools.repositories.file import RepositoryFile
-
+from codeminer_tools.repositories.directory import RepositoryDirectory
+from codeminer_tools.repositories.entity import EntityType, RepositoryEntity
 
 class ChangeType(Enum):
     add = 0       # File added with unknown origin
@@ -76,11 +77,24 @@ class Change:
             action):
         self.previous_entities = []
         if previous_path is not None:
-            self.previous_entities.append(RepositoryFile(
-                repository, previous_path, previous_revision))
-        self.current_entity = RepositoryFile(
-            repository, current_path, current_revision)
+            if previous_type == EntityType.directory:
+                self.previous_entities.append(RepositoryDirectory(
+                    repository, previous_path, previous_revision))
+            elif previous_type == EntityType.file:
+                self.previous_entities.append(RepositoryFile(
+                    repository, previous_path, previous_revision))
+            else:
+                print(previous_path, previous_revision, previous_type, current_path, current_revision, current_type, action)
+
         self.action = action
+        if current_type == EntityType.directory:
+            self.current_entity = RepositoryDirectory(
+                repository, current_path, current_revision)
+        elif current_type == EntityType.file or current_type == None:
+            self.current_entity = RepositoryFile(
+                repository, current_path, current_revision)
+        else:
+            print(previous_path, previous_revision, previous_type, current_path, current_revision, current_type, action)
 
     def add_previous_entity(
             self,

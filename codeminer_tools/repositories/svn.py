@@ -20,11 +20,11 @@ from codeminer_tools.clients.svn import SVNClient, SVNException
 
 class SVNRepository(Repository):
 
-    def __init__(self, path, *args, **kwargs):
+    def __init__(self, path, cleanup=True, *args, **kwargs):
         super().__init__(*args, **kwargs)
         if os.path.exists(path):
             self.working_copy = path
-            self.cleanup = False
+            self.cleanup = False # Never cleanup existing paths
         else:
             if path[-1] == '/':
                 path = path[:-1]
@@ -36,9 +36,11 @@ class SVNRepository(Repository):
             client = SVNClient(username=self.username, password=self.password)
             client.checkout(path, cwd=checkout_path, quiet=True, revision=revision)
             self.working_copy = os.path.join(checkout_path, os.path.basename(path))
-            self.cleanup = True
+            self.cleanup = cleanup # Only cleanup if user didn't specify otherwise
         self.client = SVNClient(username=self.username, password=self.password, cwd=self.working_copy)
-        self.origin = self.info()['url']
+        info = self.info()
+        self.origin = info['url']
+        self.repo_root = info['root']
         self.name = 'SVN'
 
     def __del__(self):
@@ -123,7 +125,7 @@ class SVNRepository(Repository):
 
             if action_string == 'A':
                 action = ChangeType.add
-                current_path = path.text[1:]
+                current_path = join(self.repo_root, path.text)
                 current_revision = str(revision)
                 current_type = kind
                 previous_path = None
@@ -131,10 +133,10 @@ class SVNRepository(Repository):
                 previous_type = None
             elif action_string == 'C':
                 action = ChangeType.copy
-                current_path = path.text[1:]
+                current_path = join(self.repo_root, path.text)
                 current_revision = str(revision)
                 current_type = kind
-                previous_path = path.get('copyfrom-path')[1:]
+                previous_path = join(self.repo_root, path.get('copyfrom-path'))
                 previous_revision = path.get('copyfrom-rev')
                 previous_type = kind
             elif action_string == 'D':
@@ -142,7 +144,7 @@ class SVNRepository(Repository):
                 current_path = None
                 current_revision = None
                 current_type = None
-                previous_path = path.text[1:]
+                previous_path = join(self.repo_root, path.text)
                 previous_revision = str(revision - 1)
                 previous_type = kind
             else:
@@ -155,10 +157,10 @@ class SVNRepository(Repository):
                 # If the commit had the copyfrom history, we would treat this
                 # as a 'copy', but it didn't... so modify is a good approximation
                 action = ChangeType.modify
-                current_path = path.text[1:]
+                current_path = join(self.repo_root, path.text)
                 current_revision = str(revision)
                 current_type = kind
-                previous_path = path.text[1:]
+                previous_path = join(self.repo_root, path.text)
                 previous_revision = str(revision - 1)
                 previous_type = kind
 
@@ -191,6 +193,6 @@ class SVNRepository(Repository):
             revision = entry.get('name')
             kind = entry.get('kind')
             if kind == 'dir':
-                yield(RepositoryDirectory(path = name, revision = revision))
+                yield(RepositoryDirectory(path = join(self.origin, name), revision = revision))
             elif kind == 'file':
-                yield(RepositoryFile(path = name, revision = revision))
+                yield(RepositoryFile(path = join(self.origin, name), revision = revision))
